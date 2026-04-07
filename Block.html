@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MEGA BREAKOUT</title>
+    <style>
+        body {
+            margin: 0; padding: 0;
+            background: #111;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+        #game-wrapper {
+            position: relative;
+            width: 100%; max-width: 450px;
+            height: 100%; max-height: 800px;
+            background: #1a1a2e;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        canvas {
+            display: block; width: 100%; height: 100%;
+        }
+        /* UIレイヤー共通 */
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(26, 26, 46, 0.95);
+            z-index: 10; color: white;
+            touch-action: manipulation;
+        }
+        .hidden { display: none !important; }
+        
+        /* タイトル画面 */
+        #title-layer { justify-content: center; background: midnightblue; cursor: pointer; }
+        h1 { font-size: 36px; margin-bottom: 20px; text-shadow: 2px 2px 4px #000; text-align: center; }
+        .blink { font-size: 18px; animation: blinker 1.5s linear infinite; padding: 20px; }
+        @keyframes blinker { 50% { opacity: 0.3; } }
+
+        /* 装備画面 */
+        #equip-layer { padding-top: 10%; box-sizing: border-box; overflow-y: auto; }
+        h2 { font-size: 24px; margin: 10px 0; }
+        #pt-label { color: cyan; font-size: 18px; margin: 5px 0 15px 0; }
+        #gacha-msg { color: #f1c40f; font-size: 14px; min-height: 20px; margin-bottom: 10px; font-weight: bold; text-align: center; padding: 0 10px;}
+        .equip-btn {
+            background: #2c3e50; color: white; border: none;
+            width: 80%; padding: 12px; margin: 6px 0;
+            font-size: 16px; border-radius: 8px; cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            touch-action: manipulation;
+        }
+        .equip-btn:active { transform: scale(0.98); }
+        #btn-gacha { background: #e67e22; margin-top: 15px; font-weight: bold; }
+        #btn-start { color: #4cd964; margin-top: 25px; margin-bottom: 30px; font-size: 20px; cursor: pointer; padding: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="title-layer" class="ui-layer">
+        <h1>MEGA BREAKOUT</h1>
+        <div class="blink">画面をタップしてスタート</div>
+    </div>
+
+    <div id="equip-layer" class="ui-layer hidden">
+        <h2 id="equip-title">【 装備変更 & 再挑戦 】</h2>
+        <div id="pt-label">所持ポイント: 0 pt</div>
+        <div id="gacha-msg"></div>
+
+        <button id="btn-main" class="equip-btn">メイン: </button>
+        <button id="btn-sub" class="equip-btn">サブ: </button>
+        <button id="btn-option" class="equip-btn">ｵﾌﾟｼｮﾝ: </button>
+        <button id="btn-acc1" class="equip-btn">ｱｸｾ(1): </button>
+        <button id="btn-acc2" class="equip-btn">ｱｸｾ(2): </button>
+
+        <button id="btn-gacha" class="equip-btn">🎁 装備ガチャ (300pt)</button>
+        <div id="btn-start">▶︎ STAGE 1 からスタート</div>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 1. サウンド管理
+// ==========================================
+let audioCtx = null;
+const Sound = {
+    play: function(type) {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'hit') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'explosion') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.3);
+                gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'powerup') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
+                gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'coin') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now); osc.frequency.linearRampToValueAtTime(2000, now + 0.1);
+                gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'laser') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+                gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            }
+        } catch(e) {
+            console.warn("Sound play error:", e);
+        }
+    }
+};
+
+// ==========================================
+// 2. アイテム定義とセーブデータ管理
+// ==========================================
+const ITEM_DEFS = {
+    'none': {cat: 'none', name: '【空き】'},
+    'ball_normal': {cat: 'main', name: 'ノーマルボール'},
+    'ball_heavy': {cat: 'main', name: 'ヘビーボール'},
+    'ball_pierce': {cat: 'main', name: '貫通ボール'},
+    'ball_explode': {cat: 'main', name: '爆発ボール'},
+    'beam_normal': {cat: 'sub', name: 'ノーマルビーム'},
+    'beam_rapid': {cat: 'sub', name: 'ラピッドビーム'},
+    'barrier': {cat: 'option', name: '回転バリア'},
+    'barrier_multi': {cat: 'option', name: 'マルチバリア'},
+    'acc_ball_up': {cat: 'acc', name: '初期ボール追加'},
+    'acc_beam_up': {cat: 'acc', name: 'ビーム時間延長'},
+    'acc_life_up': {cat: 'acc', name: '最大ライフUP'},
+    'acc_score_up': {cat: 'acc', name: '獲得ポイントUP'},
+    'boss_main_meteor': {cat: 'main', name: '【星砕き】(威/貫)'},
+    'boss_main_nova': {cat: 'main', name: '【超新星】(威/爆)'},
+    'boss_sub_divine': {cat: 'sub', name: '【神罰】(連/威)'},
+    'boss_opt_aegis': {cat: 'option', name: '【ｲｰｼﾞｽ】(盾/弾)'}
+};
+const GACHA_POOL = Object.keys(ITEM_DEFS).filter(k => k !== 'none' && !k.startsWith('boss_'));
+const BOSS_POOL = Object.keys(ITEM_DEFS).filter(k => k.startsWith('boss_'));
+
+class SaveData {
+    constructor() { this.load(); }
+    load() {
+        let data = {};
+        try { data = JSON.parse(localStorage.getItem('megabreakout_save_v5')) || {}; }
+        catch(e) { console.warn("Save Load Error", e); }
+        
+        this.loadout = data.loadout || {main: 'ball_normal', sub: 'beam_normal', option: 'none', acc1: 'none', acc2: 'none'};
+        this.inventory = data.inventory || {main: ['ball_normal'], sub: ['none', 'beam_normal'], option: ['none', 'barrier'], acc: ['none']};
+        this.total_points = data.total_points || 0;
+        this.item_counts = data.item_counts || {'ball_normal': 1, 'beam_normal': 1, 'barrier': 1};
+    }
+    save() {
+        try {
+            localStorage.setItem('megabreakout_save_v5', JSON.stringify({
+                loadout: this.loadout, inventory: this.inventory, total_points: this.total_points, item_counts: this.item_counts
+            }));
+        } catch(e) { console.warn("Save Write Error", e); }
+    }
+    getLevel(itemId) {
+        if (itemId === 'none') return 0;
+        const c = this.item_counts[itemId] || 0;
+        if (c <= 0) return 0;
+        const lvl = Math.floor(Math.log2(c)) + 1;
+        return GACHA_POOL.includes(itemId) ? Math.min(20, lvl) : lvl;
+    }
+}
+const save = new SaveData();
+
+// ==========================================
+// 3. ゲームエンジン
+// ==========================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+    const wrap = document.getElementById('game-wrapper');
+    canvas.width = wrap.clientWidth;
+    canvas.height = wrap.clientHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function intersect(a, b) {
+    return Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2;
+}
+
+class Game {
+    constructor() {
+        this.state = 'TITLE';
+        this.ctrlY = canvas.height - 150;
+        // ★修正箇所：パドルを即死ライン（ctrlY）より「上（-20）」に配置
+        this.paddle = { w: 80, h: 15, x: canvas.width / 2, y: this.ctrlY - 20 };
+        this.resetGameVars();
+        this.bindEvents();
+        this.loop = this.loop.bind(this);
+        requestAnimationFrame(this.loop);
+    }
+
+    resetGameVars() {
+        this.stage = 1; this.score = 0; this.rowsCleared = 0; this.blocksDestroyed = 0;
+        this.columns = 6; this.bossTimer = 0; this.laserActiveTime = 0;
+        this.lives = 3; this.initialBalls = 1; this.beamMaxDuration = 300; this.pointMultiplier = 1;
+        
+        this.balls = []; this.items = []; this.lasers = []; this.enemyBullets = [];
+        this.blocks = []; this.fallingBlocks = []; this.barrierNodes = []; this.effects = []; this.floatingTexts = [];
+        this.boss = null; this.barrierAngle = 0; this.gameOver = false;
+    }
+
+    initGame() {
+        this.resetGameVars();
+        this.ctrlY = canvas.height - 150; 
+        // ★修正箇所：パドルを即死ライン（ctrlY）より「上」に再設定
+        this.paddle.y = this.ctrlY - 20;
+
+        ['acc1', 'acc2', 'option'].forEach(slot => {
+            const item = save.loadout[slot];
+            const lvl = save.getLevel(item);
+            if (item === 'acc_ball_up') this.initialBalls += lvl;
+            else if (item === 'acc_beam_up') this.beamMaxDuration += (300 * lvl);
+            else if (item === 'acc_life_up') this.lives += lvl;
+            else if (item === 'acc_score_up') this.pointMultiplier += (lvl * 0.5);
+            else if (item === 'boss_opt_aegis') this.initialBalls += (lvl * 2);
+        });
+
+        this.spawnBarriers();
+        for (let i = 0; i < 5; i++) this.spawnRow(80 + (i * 25));
+        
+        // ★ボールはパドルから少し上（-30）に出現
+        for (let i = 0; i < this.initialBalls; i++) {
+            this.spawnBall(canvas.width / 2 + (Math.random()*20-10), this.paddle.y - 30);
+        }
+        
+        this.state = 'PLAYING';
+    }
+
+    spawnRow(yPos) {
+        const bw = canvas.width / this.columns;
+        for (let col = 0; col < this.columns; col++) {
+            if (this.stage >= 5 && Math.random() < 0.3) {
+                this.createBlock(col * bw + bw / 4, yPos, bw / 2);
+                this.createBlock(col * bw + (bw * 3) / 4, yPos, bw / 2);
+            } else {
+                this.createBlock(col * bw + bw / 2, yPos, bw);
+            }
+        }
+    }
+
+    createBlock(x, y, w) {
+        const r = Math.random();
+        let bType = 'normal', color = '#4cd964';
+        const subWep = save.loadout.sub;
+
+        if (r < 0.10) { bType = 'red'; color = 'red'; }
+        else if (r < 0.18) { bType = 'blue'; color = 'cyan'; }
+        else if (r < 0.26 && ['beam_normal', 'beam_rapid', 'boss_sub_divine'].includes(subWep)) { bType = 'laser'; color = 'yellow'; }
+        else if (r < 0.32 && this.stage >= 2) { bType = 'bomb'; color = '#2c3e50'; }
+
+        let hp = 1;
+        if (bType === 'normal' && (this.stage > 1 || this.rowsCleared >= 4)) {
+            const maxHp = (this.stage * 2) + Math.floor(this.rowsCleared / 3);
+            if (Math.random() < 0.2 + (this.stage * 0.15)) {
+                hp = Math.floor(Math.random() * maxHp) + 1 + Math.floor(this.stage / 2);
+                color = '#7f8c8d';
+            }
+        }
+        this.blocks.push({ x, y, w: w - 4, h: 21, color, bType, hp });
+    }
+
+    spawnBall(x, y) {
+        let c = 'white', dmg = 1, pierce = 0, explode_lvl = 0;
+        const mainWep = save.loadout.main;
+        const lvl = save.getLevel(mainWep);
+
+        if (mainWep === 'ball_heavy') { c = '#e74c3c'; dmg = 1 + lvl; }
+        else if (mainWep === 'ball_pierce') { c = '#3498db'; pierce = lvl; }
+        else if (mainWep === 'ball_explode') { c = '#f1c40f'; explode_lvl = lvl; }
+        else if (mainWep === 'boss_main_meteor') { c = '#8e44ad'; dmg = 1 + Math.floor(lvl / 2); pierce = lvl * 2; }
+        else if (mainWep === 'boss_main_nova') { c = '#d35400'; dmg = 1 + lvl; explode_lvl = lvl; }
+
+        this.balls.push({
+            x, y, w: 16, h: 16, color: c,
+            vx: (Math.random() > 0.5 ? 4 : -4), vy: -4,
+            damage: dmg, pierceMax: pierce, pierce: pierce, explodeLvl: explode_lvl, isLarge: false
+        });
+    }
+
+    spawnBarriers() {
+        this.barrierNodes = [];
+        const opt = save.loadout.option;
+        const lvl = save.getLevel(opt);
+        let count = 0;
+        if (opt === 'barrier') count = 1;
+        else if (opt === 'barrier_multi') count = 1 + lvl;
+        else if (opt === 'boss_opt_aegis') count = 1 + lvl;
+
+        for (let i = 0; i < count; i++) this.barrierNodes.push({ w: 8, h: 8 });
+    }
+
+    spawnItem(x, y, bType) {
+        let c = 'white', w = 20;
+        if (bType === 'blue') c = 'cyan';
+        else if (bType === 'laser') c = 'yellow';
+        else if (bType === 'large_ball') c = '#9b59b6';
+        else if (bType === 'boss_drop') { c = '#f39c12'; w = 25; }
+        this.items.push({ x, y, w, h: w, color: c, bType });
+    }
+
+    spawnBoss() {
+        this.state = 'BOSS';
+        this.boss = { x: canvas.width / 2, y: -60, w: 150, h: 60, color: 'magenta', hp: 30 + (this.stage * 20), targetY: 100 };
+        Sound.play('laser');
+    }
+
+    update() {
+        if (this.state === 'TITLE' || this.state === 'EQUIP' || this.gameOver) return;
+
+        this.moveObjects();
+        this.handleCollisions();
+        this.checkRules();
+        if (this.state === 'BOSS') this.updateBoss();
+    }
+
+    moveObjects() {
+        for (let i = this.balls.length - 1; i >= 0; i--) {
+            let b = this.balls[i];
+            b.x += b.vx; b.y += b.vy;
+            if (b.x <= b.w/2 || b.x >= canvas.width - b.w/2) b.vx *= -1;
+            if (b.y <= b.h/2) b.vy *= -1;
+            // 境界線（操作エリア上端）を超えたらボール消滅
+            if (b.y > this.ctrlY) { this.balls.splice(i, 1); continue; }
+        }
+
+        if (this.laserActiveTime > 0) {
+            this.laserActiveTime--;
+            let interval = 15, dmg = 1;
+            const sub = save.loadout.sub, lvl = save.getLevel(sub);
+            if (sub === 'beam_rapid') interval = Math.max(2, 12 - (lvl * 2));
+            else if (sub === 'boss_sub_divine') { interval = Math.max(1, 10 - Math.floor(lvl / 2)); dmg = 1 + lvl; }
+            
+            if (this.laserActiveTime % interval === 0) {
+                this.lasers.push({ x: this.paddle.x, y: this.paddle.y - 20, w: 4, h: 20, color: 'yellow', vy: -10, damage: dmg });
+                Sound.play('laser');
+            }
+        }
+
+        const moveArr = (arr) => {
+            for (let i = arr.length - 1; i >= 0; i--) {
+                let obj = arr[i];
+                obj.x += obj.vx || 0; obj.y += obj.vy;
+                if (obj.y > this.ctrlY + 50 || (obj.y < -50 && obj.vy < 0)) arr.splice(i, 1);
+            }
+        };
+        moveArr(this.lasers);
+        moveArr(this.enemyBullets);
+        moveArr(this.fallingBlocks);
+        
+        for (let i = this.items.length - 1; i >= 0; i--) {
+            this.items[i].y += 4;
+            if (this.items[i].y > this.ctrlY + 50) this.items.splice(i, 1);
+        }
+
+        if (this.barrierNodes.length > 0) {
+            this.barrierAngle += 0.05;
+            const radius = this.paddle.w / 2 + 15;
+            this.barrierNodes.forEach((b, i) => {
+                const angle = this.barrierAngle + (i * (2 * Math.PI / this.barrierNodes.length));
+                b.x = this.paddle.x + Math.cos(angle) * radius;
+                b.y = this.paddle.y + Math.sin(angle) * radius;
+            });
+        }
+    }
+
+    updateBoss() {
+        if (!this.boss) return;
+        if (this.boss.y < this.boss.targetY) this.boss.y += 1;
+        this.bossTimer += 0.03;
+        this.boss.x = canvas.width / 2 + Math.sin(this.bossTimer * 2) * 100;
+
+        if (Math.random() < 0.05 + (this.stage * 0.01)) {
+            const r = Math.random();
+            if (r < 0.7) this.fireEnemyAttack(this.boss.x, this.boss.y + 30, 'bullet', true);
+            else if (r < 0.9) this.fireEnemyAttack(this.boss.x, this.boss.y + 30, 'laser');
+            else this.fireEnemyAttack(this.boss.x, this.boss.y + 30, 'falling_block');
+        }
+    }
+
+    fireEnemyAttack(x, y, type, aimed = false) {
+        const speed = 3.5 + (this.stage * 0.2);
+        if (type === 'bullet') {
+            let vx = 0, vy = speed;
+            if (aimed) {
+                const dx = this.paddle.x - x, dy = this.paddle.y - y;
+                const dist = Math.max(Math.hypot(dx, dy), 1);
+                vx = (dx / dist) * speed; vy = (dy / dist) * speed;
+            }
+            this.enemyBullets.push({ x, y, w: 12, h: 12, color: 'red', vx, vy });
+        } else if (type === 'laser') {
+            this.enemyBullets.push({ x, y, w: 6, h: 80, color: '#ff4757', vx: 0, vy: 12 });
+        } else if (type === 'falling_block') {
+            this.fallingBlocks.push({ x, y, w: 30, h: 30, color: '#7f8c8d', vx: 0, vy: 2.5, hp: 3 + this.stage });
+        }
+    }
+
+    handleCollisions() {
+        this.balls.forEach(ball => {
+            if (intersect(ball, this.paddle) && ball.vy > 0) {
+                ball.vy *= -1;
+                ball.vx = (ball.x - this.paddle.x) * 0.15;
+                ball.pierce = ball.pierceMax || 0;
+            }
+            if (ball.isLarge) {
+                for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
+                    if (intersect(ball, this.enemyBullets[i])) {
+                        Sound.play('coin'); this.enemyBullets.splice(i, 1);
+                    }
+                }
+            }
+        });
+
+        for (let i = this.items.length - 1; i >= 0; i--) {
+            if (intersect(this.items[i], this.paddle)) {
+                this.applyItem(this.items[i]); this.items.splice(i, 1);
+            }
+        }
+        for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
+            if (intersect(this.enemyBullets[i], this.paddle)) {
+                this.loseLife(); this.enemyBullets.splice(i, 1);
+            }
+        }
+        for (let i = this.fallingBlocks.length - 1; i >= 0; i--) {
+            if (intersect(this.fallingBlocks[i], this.paddle)) {
+                this.loseLife(); this.fallingBlocks.splice(i, 1);
+            }
+        }
+
+        for (let i = this.barrierNodes.length - 1; i >= 0; i--) {
+            let hit = false;
+            for (let j = this.enemyBullets.length - 1; j >= 0; j--) {
+                if (intersect(this.barrierNodes[i], this.enemyBullets[j])) {
+                    Sound.play('coin'); this.enemyBullets.splice(j, 1); hit = true; break;
+                }
+            }
+            if (hit) this.barrierNodes.splice(i, 1);
+        }
+
+        const projectiles = [...this.balls, ...this.lasers];
+        projectiles.forEach(p => {
+            let hitSomething = false;
+            if (this.boss && intersect(p, this.boss)) { this.hitBoss(p); return; }
+            for (let i = this.blocks.length - 1; i >= 0; i--) {
+                if (intersect(p, this.blocks[i])) { this.hitBlock(p, i); hitSomething = true; break; }
+            }
+            if (hitSomething) return;
+            for (let i = this.fallingBlocks.length - 1; i >= 0; i--) {
+                if (intersect(p, this.fallingBlocks[i])) { this.hitFallingBlock(p, i); break; }
+            }
+        });
+    }
+
+    applyItem(item) {
+        if (item.bType === 'blue') this.spawnBall(this.paddle.x, this.paddle.y - 20);
+        else if (item.bType === 'laser') this.laserActiveTime = this.beamMaxDuration;
+        else if (item.bType === 'large_ball') {
+            this.balls.forEach(b => {
+                if (!b.isLarge) { b.w = 32; b.h = 32; b.damage *= 3; b.isLarge = true; b.vx *= 0.7; b.vy *= 0.7; }
+            });
+        } else if (item.bType === 'boss_drop') {
+            const dropId = BOSS_POOL[Math.floor(Math.random() * BOSS_POOL.length)];
+            const fragments = Math.pow(2, Math.max(0, this.stage - 1));
+            save.item_counts[dropId] = (save.item_counts[dropId] || 0) + fragments;
+            const dropCat = ITEM_DEFS[dropId].cat;
+            if (!save.inventory[dropCat].includes(dropId)) save.inventory[dropCat].push(dropId);
+            Sound.play('powerup');
+            this.addFloatingText(`★ ${ITEM_DEFS[dropId].name} Get! ★`, this.paddle.x, this.paddle.y, '#f1c40f');
+            save.save();
+        }
+        if (item.bType !== 'boss_drop') Sound.play('powerup');
+    }
+
+    hitBlock(p, blockIdx) {
+        const block = this.blocks[blockIdx];
+        block.hp -= p.damage || 1;
+        if (block.hp <= 0) this.destroyBlock(blockIdx); else Sound.play('hit');
+
+        if (p.vy === -10) this.lasers = this.lasers.filter(l => l !== p);
+        else {
+            if (p.explodeLvl > 0) this.triggerAOE(block.x, block.y, p.explodeLvl, p.damage);
+            if (p.pierce > 0) p.pierce--; else p.vy *= -1;
+        }
+    }
+
+    hitFallingBlock(p, fbIdx) {
+        const fb = this.fallingBlocks[fbIdx];
+        fb.hp -= p.damage || 1;
+        if (fb.hp <= 0) {
+            Sound.play('explosion'); this.score += 50; save.total_points += 50;
+            if (p.explodeLvl > 0) this.triggerAOE(fb.x, fb.y, p.explodeLvl, p.damage);
+            this.fallingBlocks.splice(fbIdx, 1);
+        } else { Sound.play('hit'); }
+
+        if (p.vy === -10) this.lasers = this.lasers.filter(l => l !== p);
+        else { if (p.pierce > 0) p.pierce--; else p.vy *= -1; }
+    }
+
+    destroyBlock(idx) {
+        const block = this.blocks[idx];
+        if (block.bType === 'red') this.fireEnemyAttack(block.x, block.y, 'bullet', true);
+        else if (block.bType === 'bomb') {
+            Sound.play('explosion');
+            for (let a = 0; a < 360; a += 45) {
+                const rad = a * Math.PI / 180;
+                this.enemyBullets.push({ x: block.x, y: block.y, w: 10, h: 10, color: 'red', vx: Math.cos(rad)*4, vy: Math.sin(rad)*4 });
+            }
+        } else if (block.bType !== 'normal') {
+            this.spawnItem(block.x, block.y, block.bType);
+        }
+
+        this.blocks.splice(idx, 1);
+        const addPts = Math.floor(10 * this.pointMultiplier);
+        this.score += addPts; save.total_points += addPts;
+        this.blocksDestroyed++;
+    }
+
+    triggerAOE(x, y, level, damage) {
+        const radius = 30 + (level * 15);
+        this.effects.push({ x, y, r: radius, life: 1.0, color: 'orange' });
+        Sound.play('explosion');
+        for (let i = this.blocks.length - 1; i >= 0; i--) {
+            if (Math.hypot(this.blocks[i].x - x, this.blocks[i].y - y) <= radius) {
+                this.blocks[i].hp -= damage;
+                if (this.blocks[i].hp <= 0) this.destroyBlock(i);
+            }
+        }
+    }
+
+    hitBoss(p) {
+        this.boss.hp -= p.damage || 1;
+        Sound.play('hit');
+        if (p.vy === -10) this.lasers = this.lasers.filter(l => l !== p);
+        else { if (p.pierce > 0) p.pierce--; else p.vy *= -1; }
+
+        if (this.boss.hp <= 0) {
+            const addPts = Math.floor(500 * this.pointMultiplier);
+            this.score += addPts; save.total_points += addPts;
+            const r = Math.random();
+            if (r < 0.30) this.spawnItem(this.boss.x, this.boss.y, 'boss_drop');
+            else if (r < 0.70) this.spawnItem(this.boss.x, this.boss.y, 'large_ball');
+            
+            this.boss = null; this.state = 'PLAYING'; Sound.play('explosion');
+            this.stage++; this.rowsCleared = 0; this.advanceLevel();
+        }
+    }
+
+    checkRules() {
+        if (this.balls.length === 0 && !this.gameOver) {
+            this.loseLife();
+            if (!this.gameOver) this.spawnBall(canvas.width / 2, this.paddle.y - 30);
+        }
+
+        if (this.blocksDestroyed >= this.columns) {
+            this.blocksDestroyed = 0;
+            if (this.state !== 'BOSS') {
+                this.rowsCleared++;
+                if (this.rowsCleared >= 10) this.spawnBoss();
+                else this.advanceLevel();
+            }
+        }
+    }
+
+    advanceLevel() {
+        let invaded = false;
+        this.blocks.forEach(b => {
+            b.y += 25;
+            if (b.y + b.h/2 >= this.ctrlY - 10) invaded = true;
+        });
+        
+        if (invaded) {
+            this.gameOver = true; save.save(); Sound.play('explosion');
+            showEquipMenu("【 防衛失敗...ブロックが侵入しました 】");
+            return;
+        }
+        this.spawnRow(80); this.spawnBarriers();
+    }
+
+    loseLife() {
+        this.lives--; Sound.play('explosion');
+        if (this.lives <= 0) {
+            this.gameOver = true; save.save();
+            showEquipMenu("【 ゲームオーバー 】");
+        } else {
+            this.spawnBarriers();
+        }
+    }
+
+    addFloatingText(text, x, y, color) {
+        this.floatingTexts.push({ text, x, y, color, life: 1.0 });
+    }
+
+    draw() {
+        ctx.fillStyle = this.state === 'TITLE' ? '#111' : '#1a1a2e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (this.state === 'TITLE' || this.state === 'EQUIP') return;
+
+        ctx.fillStyle = '#223'; ctx.fillRect(0, this.ctrlY, canvas.width, canvas.height - this.ctrlY);
+        ctx.fillStyle = 'white'; ctx.fillRect(0, this.ctrlY, canvas.width, 2);
+        
+        ctx.fillStyle = 'white'; ctx.font = '16px Helvetica-Bold'; ctx.textAlign = 'center';
+        ctx.fillText(`STAGE ${this.stage}-${this.rowsCleared}   LIFE:${this.lives}   PTS:${save.total_points}`, canvas.width/2, this.ctrlY + 25);
+
+        const drawRect = (obj, isBlock=false) => {
+            ctx.fillStyle = obj.color;
+            ctx.fillRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
+            if (isBlock && obj.hp > 1 && obj.bType !== 'bomb') {
+                ctx.fillStyle = 'black'; ctx.font = '14px Helvetica-Bold';
+                ctx.fillText(obj.hp, obj.x, obj.y + 5);
+            } else if (isBlock && obj.bType === 'bomb') {
+                ctx.fillStyle = 'white'; ctx.font = '14px Helvetica-Bold'; ctx.fillText('✖', obj.x, obj.y + 5);
+            }
+        };
+
+        this.blocks.forEach(b => drawRect(b, true));
+        this.fallingBlocks.forEach(fb => drawRect(fb, true));
+        this.items.forEach(i => drawRect(i));
+        this.enemyBullets.forEach(b => drawRect(b));
+        this.lasers.forEach(l => drawRect(l));
+        
+        this.balls.forEach(b => {
+            ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.w/2, 0, Math.PI*2); ctx.fill();
+        });
+
+        drawRect(this.paddle);
+        this.barrierNodes.forEach(b => drawRect(b));
+
+        if (this.boss) {
+            drawRect(this.boss);
+            ctx.fillStyle = 'white'; ctx.font = '20px Helvetica-Bold';
+            ctx.fillText(`HP: ${Math.max(0, this.boss.hp)}`, this.boss.x, this.boss.y + 10);
+        }
+
+        for (let i = this.effects.length - 1; i >= 0; i--) {
+            let e = this.effects[i];
+            ctx.globalAlpha = e.life; ctx.fillStyle = e.color;
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha = 1.0; e.life -= 0.05;
+            if (e.life <= 0) this.effects.splice(i, 1);
+        }
+
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+            let ft = this.floatingTexts[i];
+            ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = '18px Helvetica-Bold';
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.globalAlpha = 1.0; ft.y -= 1; ft.life -= 0.015;
+            if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+        }
+    }
+
+    loop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(this.loop);
+    }
+
+    bindEvents() {
+        const handleMove = (clientX) => {
+            if (this.state !== 'PLAYING' && this.state !== 'BOSS') return;
+            const rect = canvas.getBoundingClientRect();
+            let x = clientX - rect.left;
+            x *= canvas.width / rect.width; 
+            this.paddle.x = Math.max(this.paddle.w/2, Math.min(canvas.width - this.paddle.w/2, x));
+        };
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMove(e.touches[0].clientX); }, {passive: false});
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e.touches[0].clientX); }, {passive: false});
+        canvas.addEventListener('mousedown', (e) => { handleMove(e.clientX); });
+        canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleMove(e.clientX); });
+    }
+}
+
+const game = new Game();
+
+// ==========================================
+// 4. UI と状態遷移の制御 (DOM)
+// ==========================================
+const titleLayer = document.getElementById('title-layer');
+const equipLayer = document.getElementById('equip-layer');
+
+titleLayer.addEventListener('click', () => {
+    Sound.play('coin');
+    showEquipMenu("");
+});
+
+function showEquipMenu(msg) {
+    game.state = 'EQUIP';
+    titleLayer.classList.add('hidden');
+    equipLayer.classList.remove('hidden');
+    
+    document.getElementById('equip-title').innerText = msg ? msg : '【 装備変更 & 再挑戦 】';
+    document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
+    document.getElementById('gacha-msg').innerText = '';
+
+    const updateBtn = (slotKey, btnId) => {
+        const itemId = save.loadout[slotKey];
+        let name = ITEM_DEFS[itemId].name;
+        if (itemId !== 'none') {
+            const lvl = save.getLevel(itemId);
+            if (BOSS_POOL.includes(itemId)) name = `★ ${name} [Lv.${lvl}]`;
+            else name = `${name} [Lv.${lvl}]${lvl >= 20 ? ' MAX' : ''}`;
+        }
+        const label = {'main':'メイン', 'sub':'サブ', 'option':'ｵﾌﾟｼｮﾝ', 'acc1':'ｱｸｾ(1)', 'acc2':'ｱｸｾ(2)'}[slotKey];
+        document.getElementById(btnId).innerText = `${label}: ${name}`;
+    };
+
+    ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((key, idx) => {
+        const btnIds = ['btn-main', 'btn-sub', 'btn-option', 'btn-acc1', 'btn-acc2'];
+        updateBtn(key, btnIds[idx]);
+        
+        document.getElementById(btnIds[idx]).onclick = () => {
+            const targetCat = key.startsWith('acc') ? 'acc' : key;
+            const available = save.inventory[targetCat];
+            const currentIdx = available.indexOf(save.loadout[key]);
+            save.loadout[key] = available[(currentIdx + 1) % available.length];
+            Sound.play('coin'); save.save(); updateBtn(key, btnIds[idx]);
+        };
+    });
+}
+
+document.getElementById('btn-start').addEventListener('click', () => {
+    equipLayer.classList.add('hidden');
+    game.initGame();
+});
+
+document.getElementById('btn-gacha').addEventListener('click', () => {
+    const msgEl = document.getElementById('gacha-msg');
+    if (save.total_points < 300) { msgEl.innerText = "ポイントが足りません！"; return; }
+    
+    const pool = GACHA_POOL.filter(item => save.getLevel(item) < 20);
+    if (pool.length === 0) { msgEl.innerText = "通常ガチャの装備はすべて最大(Lv.20)です！"; return; }
+
+    save.total_points -= 300;
+    const itemId = pool[Math.floor(Math.random() * pool.length)];
+    const def = ITEM_DEFS[itemId];
+    
+    save.item_counts[itemId] = (save.item_counts[itemId] || 0) + 1;
+    const count = save.item_counts[itemId];
+    const newLevel = save.getLevel(itemId);
+    
+    let msg = "";
+    if (!save.inventory[def.cat].includes(itemId)) {
+        save.inventory[def.cat].push(itemId);
+        msg = `★ 新装備 ${def.name} をゲット！ ★`;
+    } else {
+        const nextReq = Math.pow(2, newLevel) - count;
+        if (nextReq === 0) msg = `★ ${def.name} が Lv.${newLevel} に進化！ ★`;
+        else msg = `★ ${def.name} の欠片ゲット！ (次Lvまで後 ${nextReq}個) ★`;
+    }
+    
+    Sound.play('powerup'); save.save(); showEquipMenu(msg);
+});
+</script>
+</body>
+</html>
