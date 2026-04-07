@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEGA BREAKOUT V10</title>
+    <title>MEGA BREAKOUT V10.1</title>
     <style>
         body { margin: 0; padding: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; touch-action: none; user-select: none; }
         #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 800px; background: #1a1a2e; box-shadow: 0 0 10px rgba(0,0,0,0.5); overflow: hidden; }
@@ -43,7 +43,7 @@
     <canvas id="gameCanvas"></canvas>
     <button id="btn-auto-stop" class="hidden">■ 自動操作モードを終了</button>
     <div id="title-layer" class="ui-layer">
-        <h1>MEGA BREAKOUT V10</h1>
+        <h1>MEGA BREAKOUT V10.1</h1>
         <div class="blink">画面をタップしてスタート</div>
     </div>
     
@@ -63,7 +63,7 @@
         </div>
         
         <div id="btn-start">▶︎ 通常スタート</div>
-        <div id="btn-auto-start">🤖 自動モード (放置・ドロップ0.5%)</div>
+        <div id="btn-auto-start">🤖 自動モード (放置・Pt1/5・ドロップ0.5%)</div>
     </div>
 
     <div id="inventory-modal" class="ui-layer hidden">
@@ -99,14 +99,12 @@ const Sound = {
 // ==========================================
 const ITEM_DEFS = {
     'none': {cat: 'none', name: '【空き】', short: 'なし'},
-    // MAIN
     'main_normal': {cat: 'main', name: 'ﾉｰﾏﾙﾎﾞｰﾙ', short: 'ﾎﾞｰﾙ威力'},
     'main_rapid': {cat: 'main', name: 'ﾗﾋﾟｯﾄﾞﾎﾞｰﾙ', short: 'ﾎﾞｰﾙ速度'},
     'main_pierce': {cat: 'main', name: '貫通ﾎﾞｰﾙ[RARE]', short: 'ﾎﾞｰﾙ貫通'},
     'main_exp_rad': {cat: 'main', name: '爆発ﾎﾞｰﾙ(広域)', short: 'ﾎﾞｰﾙ爆発範囲'},
     'main_exp_dmg': {cat: 'main', name: '爆発ﾎﾞｰﾙ(威力)', short: 'ﾎﾞｰﾙ爆発威力'},
     
-    // SUB
     'sub_lsr_dmg': {cat: 'sub', name: 'ﾚｰｻﾞｰ(威力)', short: 'ﾚｰｻﾞｰ威力'},
     'sub_lsr_spd': {cat: 'sub', name: 'ﾚｰｻﾞｰ(速射)', short: 'ﾚｰｻﾞｰ速射'},
     'sub_lsr_prc': {cat: 'sub', name: 'ﾚｰｻﾞｰ(貫通)[RARE]', short: 'ﾚｰｻﾞｰ貫通'},
@@ -117,7 +115,6 @@ const ITEM_DEFS = {
     'sub_msl_cnt': {cat: 'sub', name: 'ﾐｻｲﾙ(弾数)', short: 'ﾐｻｲﾙ弾数'},
     'sub_bomb_req': {cat: 'sub', name: 'ﾎﾞﾑ(ｺｽﾄ減)', short: 'ﾎﾞﾑｺｽﾄ削減'},
     
-    // OPT
     'opt_rot_cnt': {cat: 'opt', name: '回転ﾊﾞﾘｱ(枚数)', short: '回転ﾊﾞﾘｱ枚数'},
     'opt_rot_size': {cat: 'opt', name: '回転ﾊﾞﾘｱ(ｻｲｽﾞ)', short: '回転ﾊﾞﾘｱｻｲｽﾞ'},
     'opt_rot_spd': {cat: 'opt', name: '回転ﾊﾞﾘｱ(速度)', short: '回転ﾊﾞﾘｱ速度'},
@@ -125,7 +122,6 @@ const ITEM_DEFS = {
     'opt_pill_cnt': {cat: 'opt', name: 'ﾄｰﾁｶ(設置数)', short: 'ﾄｰﾁｶ数'},
     'opt_pill_hp': {cat: 'opt', name: 'ﾄｰﾁｶ(強度)', short: 'ﾄｰﾁｶ強度'},
     
-    // ACC (Satellite & Ball count moved here)
     'acc_ball_cnt': {cat: 'acc', name: '初期弾数追加[RARE]', short: '初期弾数'},
     'acc_sat_hp': {cat: 'acc', name: '子機(体力)', short: '子機体力'},
     'acc_sat_spd': {cat: 'acc', name: '子機(移動速度)', short: '子機速度'},
@@ -257,10 +253,8 @@ class Game {
                     const def = ITEM_DEFS[ef.type];
                     if (!def) return;
                     if (ef.level > 0) {
-                        // メリットはカテゴリ一致、またはopt枠なら全て発動
                         if (slotCat === 'opt' || def.cat === slotCat) APPLY_EFFECTS[ef.type](ef.level, this.s);
                     } else {
-                        // デメリットは常に発動
                         APPLY_EFFECTS[ef.type](ef.level, this.s);
                     }
                 });
@@ -433,7 +427,6 @@ class Game {
             if (b.y <= hw) { b.vy *= -1; wallHit = true; }
             if (b.y > this.ctrlY) { this.balls.splice(i, 1); continue; }
 
-            // 壁にあたったら貫通・爆発効果をリセット（ただのボールに戻る）
             if (wallHit) {
                 b.activePierce = 0;
                 b.activeExpDmg = 0;
@@ -485,7 +478,6 @@ class Game {
             });
         }
         
-        // ★ 子機は常に自動的にボールを追い、Y軸はパドルと同じ
         if (this.satellites.length > 0) {
             let targetX = canvas.width / 2, maxY = -100, targetBall = null;
             this.balls.forEach(b => { if(b.vy > 0 && b.y > maxY) { maxY = b.y; targetBall = b; } });
@@ -494,7 +486,7 @@ class Game {
             
             this.satellites.forEach(s => { 
                 s.x = this.satFormationX + s.dx; 
-                s.y = this.paddle.y; // ★ パドルと同一Y軸
+                s.y = this.paddle.y; 
             });
         }
         
@@ -534,7 +526,6 @@ class Game {
     handleCollisions() {
         if (this.pendingRestart) return;
 
-        // ★ ボールとパドル/子機の反射 (チャージ)
         this.balls.forEach(ball => {
             let bouncedOnFriendly = false;
             
@@ -611,7 +602,11 @@ class Game {
             this.bombCount++;
             if (this.bombCount >= this.s.bombReq) {
                 this.bombCount = 0; Sound.play('explosion');
-                this.blocks.forEach(b => { save.total_points += Math.floor(10 * this.s.scoreMult); this.blocksDestroyed++; });
+                this.blocks.forEach(b => { 
+                    let pt = Math.floor(10 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
+                    save.total_points += pt; 
+                    this.blocksDestroyed++; 
+                });
                 this.blocks = []; this.effects.push({ x: canvas.width/2, y: canvas.height/2, r: canvas.height, life: 1.0, color: 'magenta' });
                 this.addFloatingText(`BOMB EXECUTED!`, canvas.width/2, this.ctrlY - 50, 'magenta');
             } else { Sound.play('coin'); }
@@ -652,14 +647,13 @@ class Game {
         if (isLaser) { 
             if (p.pierce > 0) p.pierce--; else this.lasers = this.lasers.filter(l => l !== p); 
         } else { 
-            // ★ チャージされた爆発力があればAOE発動
             if (p.activeExpDmg > 0) this.triggerAOE(block.x, block.y, p.activeExpDmg, p.activeExpRad); 
             
             if (p.activePierce > 0) {
                 p.activePierce--; 
             } else {
                 p.vy *= -1; 
-                p.activePierce = 0; p.activeExpDmg = 0; p.activeExpRad = 0; // 貫通失敗でチャージ喪失
+                p.activePierce = 0; p.activeExpDmg = 0; p.activeExpRad = 0; 
             }
         }
     }
@@ -670,7 +664,12 @@ class Game {
         
         let dmg = p.damage || 1; if (p.isLarge) dmg *= 3;
         fb.hp -= dmg;
-        if (fb.hp <= 0) { Sound.play('explosion'); save.total_points += Math.floor(50 * this.s.scoreMult); this.fallingBlocks.splice(fbIdx, 1); } else { Sound.play('hit'); }
+        if (fb.hp <= 0) { 
+            Sound.play('explosion'); 
+            let pt = Math.floor(50 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
+            save.total_points += pt; 
+            this.fallingBlocks.splice(fbIdx, 1); 
+        } else { Sound.play('hit'); }
         
         if (isLaser) { 
             if (p.pierce > 0) p.pierce--; else this.lasers = this.lasers.filter(l => l !== p); 
@@ -692,7 +691,8 @@ class Game {
             if (Math.random() < 0.05) this.spawnItem(block.x, block.y, 'bomb_item');
         }
         this.blocks.splice(idx, 1);
-        save.total_points += Math.floor(10 * this.s.scoreMult); 
+        let pt = Math.floor(10 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
+        save.total_points += pt; 
         this.blocksDestroyed++;
     }
 
@@ -720,7 +720,8 @@ class Game {
         }
 
         if (this.boss.hp <= 0) {
-            save.total_points += Math.floor(500 * this.s.scoreMult);
+            let pt = Math.floor(500 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
+            save.total_points += pt;
             let dropRate = this.autoMode ? 0.005 : 0.30;
             const r = Math.random(); if (r < dropRate) this.spawnItem(this.boss.x, this.boss.y, 'boss_drop'); else if (r < dropRate + 0.4) this.spawnItem(this.boss.x, this.boss.y, 'large_ball');
             this.boss = null; this.state = 'PLAYING'; Sound.play('explosion');
@@ -790,13 +791,12 @@ class Game {
         this.missiles.forEach(m => drawRect(m));
         
         this.balls.forEach(b => { 
-            // ★チャージ状態のボールはオーラをまとう
             if (b.activePierce > 0 || b.activeExpDmg > 0) {
                 ctx.shadowBlur = 10; ctx.shadowColor = b.activePierce > 0 ? 'cyan' : 'orange';
             }
             ctx.fillStyle = b.color; ctx.beginPath(); 
             ctx.arc(b.x, b.y, b.w/2, 0, Math.PI*2); ctx.fill(); 
-            ctx.shadowBlur = 0; // リセット
+            ctx.shadowBlur = 0; 
         });
         
         drawRect(this.paddle); 
