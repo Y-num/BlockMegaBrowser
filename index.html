@@ -104,7 +104,6 @@ const ITEM_DEFS = {
     'boss_sub_divine': {cat: 'sub', name: '【神罰】(連/威)'},
     'boss_opt_aegis': {cat: 'option', name: '【ｲｰｼﾞｽ】(回/弾)'},
     
-    // ★新規複合ボス装備 (メリット3 / デメリット1)
     'boss_sub_command': {cat: 'sub', name: '【制圧司令】(機/太/連,-点)'},
     'boss_sub_apocalypse': {cat: 'sub', name: '【終末兵器】(弾/威/範,-幅)'},
     'boss_opt_absolute': {cat: 'option', name: '【絶対領域】(固/回/大,-球)'}
@@ -112,7 +111,6 @@ const ITEM_DEFS = {
 const GACHA_POOL = Object.keys(ITEM_DEFS).filter(k => k !== 'none' && !k.startsWith('boss_'));
 const BOSS_POOL = Object.keys(ITEM_DEFS).filter(k => k.startsWith('boss_'));
 
-// 装備効果の適用関数
 const APPLY_EFFECTS = {
     'ball_heavy': (l, s) => { s.mainDmg += l; },
     'ball_pierce': (l, s) => { s.mainPierce += l; },
@@ -199,6 +197,7 @@ class Game {
         this.blocks = []; this.fallingBlocks = []; this.effects = []; this.floatingTexts = [];
         this.barrierNodes = []; this.staticBarriers = []; this.satellites = [];
         this.boss = null; this.barrierAngle = 0; this.gameOver = false;
+        this.pendingRestart = false; // ★フリーズ防止のための再起動フラグ
     }
 
     initGame() {
@@ -280,7 +279,24 @@ class Game {
 
     update() {
         if (this.state === 'TITLE' || this.state === 'EQUIP' || this.gameOver) return;
-        this.handleAutoMode(); this.moveObjects(); this.handleCollisions(); this.checkRules();
+
+        // ★ 再起動要求があった場合はここで即座に処理して以降をスキップ（フリーズ防止策）
+        if (this.pendingRestart) {
+            save.save();
+            this.initGame();
+            return;
+        }
+
+        this.handleAutoMode();
+        this.moveObjects();
+        this.handleCollisions();
+        
+        // 当たり判定処理中に再起動要求が出ていたら以降の処理を中断
+        if (this.pendingRestart) return;
+
+        this.checkRules();
+        if (this.pendingRestart) return;
+
         if (this.state === 'BOSS') this.updateBoss();
     }
 
@@ -330,7 +346,6 @@ class Game {
         };
         moveArr(this.lasers); moveArr(this.enemyBullets); moveArr(this.fallingBlocks);
         
-        // ミサイル移動と爆発
         for (let i = this.missiles.length - 1; i >= 0; i--) {
             let m = this.missiles[i]; m.y += m.vy;
             let hit = false;
@@ -352,7 +367,6 @@ class Game {
             });
         }
         
-        // 子機パドル追従
         this.satellites.forEach(s => { s.x = this.paddle.x + s.dx; s.y = this.paddle.y - 15; });
     }
 
@@ -382,6 +396,8 @@ class Game {
     }
 
     handleCollisions() {
+        if (this.pendingRestart) return;
+
         this.balls.forEach(ball => {
             if (intersect(ball, this.paddle) && ball.vy > 0) { ball.vy *= -1; ball.vx = (ball.x - this.paddle.x) * 0.15; ball.pierce = ball.pierceMax || 0; }
             if (ball.isLarge) { for (let i = this.enemyBullets.length - 1; i >= 0; i--) { if (intersect(ball, this.enemyBullets[i])) { Sound.play('coin'); this.enemyBullets.splice(i, 1); } } }
@@ -389,34 +405,28 @@ class Game {
 
         for (let i = this.items.length - 1; i >= 0; i--) { if (intersect(this.items[i], this.paddle)) { this.applyItem(this.items[i]); this.items.splice(i, 1); } }
         
-        // パドル、子機、固定バリアへの被弾
         const checkHitObj = (objArr, bullet, onHit) => {
             for (let i = objArr.length - 1; i >= 0; i--) {
-                if (intersect(objArr[i], bullet)) {
-                    if(onHit) onHit(objArr[i], i);
-                    return true;
-                }
+                if (intersect(objArr[i], bullet)) { if(onHit) onHit(objArr[i], i); return true; }
             }
             return false;
         };
 
         for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
             let b = this.enemyBullets[i], hit = false;
-            // 1. 固定バリア
             hit = checkHitObj(this.staticBarriers, b, (st, idx) => { Sound.play('coin'); st.hp--; if(st.hp<=0) this.staticBarriers.splice(idx,1); });
-            // 2. 子機パドル
             if (!hit) hit = checkHitObj(this.satellites, b, (sat, idx) => { Sound.play('hit'); sat.hp--; if(sat.hp<=0) this.satellites.splice(idx,1); });
-            // 3. パドル本体
             if (!hit && intersect(b, this.paddle)) { this.loseLife(); hit = true; }
             if (hit) this.enemyBullets.splice(i, 1);
+            if (this.pendingRestart) return; // ★ループ中の再起動対応
         }
 
         for (let i = this.fallingBlocks.length - 1; i >= 0; i--) {
             let fb = this.fallingBlocks[i];
             if (intersect(fb, this.paddle)) { this.loseLife(); this.fallingBlocks.splice(i, 1); }
+            if (this.pendingRestart) return; // ★ループ中の再起動対応
         }
 
-        // 回転バリア
         for (let i = this.barrierNodes.length - 1; i >= 0; i--) {
             let hit = false;
             for (let j = this.enemyBullets.length - 1; j >= 0; j--) {
@@ -440,12 +450,9 @@ class Game {
         else if (item.bType === 'laser') this.laserActiveTime = this.s.beamDuration;
         else if (item.bType === 'large_ball') { this.balls.forEach(b => { if (!b.isLarge) { b.w = 32; b.h = 32; b.damage *= 3; b.isLarge = true; b.vx *= 0.7; b.vy *= 0.7; } }); }
         else if (item.bType === 'bomb_item') {
-            // 一番下の層を消し飛ばす
             let maxY = -100;
             this.blocks.forEach(b => { if (b.y > maxY) maxY = b.y; });
-            for (let i = this.blocks.length - 1; i >= 0; i--) {
-                if (Math.abs(this.blocks[i].y - maxY) < 10) this.destroyBlock(i, true);
-            }
+            for (let i = this.blocks.length - 1; i >= 0; i--) { if (Math.abs(this.blocks[i].y - maxY) < 10) this.destroyBlock(i, true); }
             Sound.play('explosion');
             this.effects.push({ x: canvas.width/2, y: maxY, r: canvas.width, life: 1.0, color: 'magenta' });
         }
@@ -485,7 +492,6 @@ class Game {
                 for (let a = 0; a < 360; a += 45) { const rad = a * Math.PI / 180; this.enemyBullets.push({ x: block.x, y: block.y, w: 10, h: 10, color: 'red', vx: Math.cos(rad)*4, vy: Math.sin(rad)*4 }); }
             } else if (block.bType !== 'normal') this.spawnItem(block.x, block.y, block.bType);
             
-            // ボムアイテムのドロップ抽選
             if (this.s.bombDrop && Math.random() < 0.05) this.spawnItem(block.x, block.y, 'bomb_item');
         }
 
@@ -514,9 +520,9 @@ class Game {
     }
 
     checkRules() {
-        if (this.balls.length === 0 && !this.gameOver) {
+        if (this.balls.length === 0 && !this.gameOver && !this.pendingRestart) {
             this.loseLife();
-            if (!this.gameOver && this.balls.length === 0) this.spawnBall(canvas.width / 2, this.paddle.y - 30);
+            if (!this.gameOver && !this.pendingRestart && this.balls.length === 0) this.spawnBall(canvas.width / 2, this.paddle.y - 30);
         }
         if (this.blocksDestroyed >= this.columns) {
             this.blocksDestroyed = 0;
@@ -529,7 +535,9 @@ class Game {
         this.blocks.forEach(b => { b.y += 25; if (b.y + b.h/2 >= this.ctrlY - 10) invaded = true; });
         if (invaded) {
             Sound.play('explosion');
-            if (this.autoMode) { save.save(); this.initGame(); return; } // オートモードは自動リスタート
+            // ★ オートモード時は再起動フラグを立てて一旦処理を抜ける
+            if (this.autoMode) { this.pendingRestart = true; return; }
+            
             this.gameOver = true; save.save(); document.getElementById('btn-auto-stop').classList.add('hidden'); showEquipMenu("【 防衛失敗...ブロックが侵入しました 】"); return;
         }
         this.spawnRow(80); this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
@@ -538,7 +546,9 @@ class Game {
     loseLife() {
         this.lives--; Sound.play('explosion');
         if (this.lives <= 0) {
-            if (this.autoMode) { save.save(); this.initGame(); return; } // オートモードは自動リスタート
+            // ★ オートモード時は再起動フラグを立てて一旦処理を抜ける
+            if (this.autoMode) { this.pendingRestart = true; return; }
+            
             this.gameOver = true; save.save(); document.getElementById('btn-auto-stop').classList.add('hidden'); showEquipMenu("【 ゲームオーバー 】");
         } else {
             this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
@@ -575,7 +585,7 @@ class Game {
         this.staticBarriers.forEach(st => { st.color = '#3498db'; drawRect(st); });
         this.satellites.forEach(sat => {
             ctx.fillStyle = '#9b59b6'; ctx.fillRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w, sat.h);
-            ctx.fillStyle = 'white'; ctx.fillRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w * (sat.hp/sat.maxHp), 2); // HPバー
+            ctx.fillStyle = 'white'; ctx.fillRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w * (sat.hp/sat.maxHp), 2);
         });
 
         if (this.boss) { drawRect(this.boss); ctx.fillStyle = 'white'; ctx.font = '20px Helvetica-Bold'; ctx.fillText(`HP: ${Math.max(0, this.boss.hp)}`, this.boss.x, this.boss.y + 10); }
