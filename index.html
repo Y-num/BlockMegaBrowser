@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEGA BREAKOUT V8</title>
+    <title>MEGA BREAKOUT V8.1</title>
     <style>
         body { margin: 0; padding: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; touch-action: none; user-select: none; }
         #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 800px; background: #1a1a2e; box-shadow: 0 0 10px rgba(0,0,0,0.5); overflow: hidden; }
@@ -42,7 +42,7 @@
     <canvas id="gameCanvas"></canvas>
     <button id="btn-auto-stop" class="hidden">■ 自動操作モードを終了</button>
     <div id="title-layer" class="ui-layer">
-        <h1>MEGA BREAKOUT V8</h1>
+        <h1>MEGA BREAKOUT V8.1</h1>
         <div class="blink">画面をタップしてスタート</div>
     </div>
     
@@ -168,18 +168,16 @@ function generateCustomDrop(powerLevel) {
     const id = 'drop_' + Date.now() + '_' + Math.floor(Math.random()*1000);
     const effectPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none');
     
-    let posCount = Math.floor(Math.random() * 2) + 2; // 2〜3個のメリット
+    let posCount = Math.floor(Math.random() * 2) + 2; 
     let effects = [];
     
     for(let i=0; i<posCount; i++) {
         let ef = effectPool[Math.floor(Math.random() * effectPool.length)];
         let lvl = Math.floor(Math.random() * powerLevel * 1.5) + 1;
-        // 回数やライフなどはバランス調整で数値を抑える
         if (ef.includes('cnt') || ef.includes('life') || ef.includes('req')) lvl = Math.floor(lvl / 8) + 1;
         effects.push({ type: ef, level: lvl });
     }
     
-    // 1個のデメリット
     let negEf = effectPool[Math.floor(Math.random() * effectPool.length)];
     let negLvl = -(Math.floor(Math.random() * powerLevel * 0.8) + 1);
     if (negEf.includes('cnt') || negEf.includes('life') || negEf.includes('req')) negLvl = -Math.floor(Math.abs(negLvl) / 8) - 1;
@@ -242,12 +240,10 @@ class Game {
             if (itemId === 'none') return;
             
             if (save.custom_items[itemId]) {
-                // カスタムドロップアイテムの適用
                 save.custom_items[itemId].effects.forEach(ef => {
                     if (APPLY_EFFECTS[ef.type]) APPLY_EFFECTS[ef.type](ef.level, this.s);
                 });
             } else {
-                // 通常ガチャアイテムの適用
                 const lvl = save.getLevel(itemId);
                 if (APPLY_EFFECTS[itemId]) APPLY_EFFECTS[itemId](lvl, this.s);
             }
@@ -287,6 +283,19 @@ class Game {
         this.state = 'PLAYING';
     }
 
+    // ★層を進める統合処理（タイマー＆ブロック破壊から呼ばれる）
+    advanceLayer() {
+        this.advanceTimer = 0; 
+        this.totalLayers++;
+        this.blocks.forEach(b => { b.y += this.ROW_H; });
+        this.spawnRow(80);
+        
+        // 10層ごとにボス出現
+        if (this.totalLayers > 0 && this.totalLayers % 10 === 0) {
+            this.spawnBoss();
+        }
+    }
+
     spawnRow(yPos) {
         const bw = canvas.width / this.columns;
         for (let col = 0; col < this.columns; col++) {
@@ -299,7 +308,6 @@ class Game {
     createBlock(x, y, w) {
         const r = Math.random(); let bType = 'normal', color = '#4cd964';
         
-        // ★ 累計30層以上で赤ブロック解禁
         if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = 'red'; } 
         else if (r < 0.25) { bType = 'blue'; color = 'cyan'; } 
         else if (r < 0.35 && this.stage >= 2) { bType = 'bomb'; color = '#2c3e50'; }
@@ -438,13 +446,12 @@ class Game {
         }
         this.satellites.forEach(s => { s.x = this.satFormationX + s.dx; s.y = this.paddle.y - 30; });
         
+        // ★ ブロック進行 (タイマー判定)
         if (this.state !== 'BOSS') {
             this.advanceTimer += 1/60;
             let limit = Math.max(1.0, 10.0 - Math.floor(this.totalLayers / 100) * 1.0);
             if (this.advanceTimer >= limit) {
-                this.advanceTimer = 0; this.totalLayers++;
-                this.blocks.forEach(b => { b.y += this.ROW_H; });
-                this.spawnRow(80);
+                this.advanceLayer();
             }
         }
         this.blocks.forEach(b => { if(b.cool > 0) b.cool--; });
@@ -570,11 +577,11 @@ class Game {
                 for (let a = 0; a < 360; a += 45) { const rad = a * Math.PI / 180; this.enemyBullets.push({ x: block.x, y: block.y, w: 10, h: 10, color: 'red', vx: Math.cos(rad)*4, vy: Math.sin(rad)*4 }); }
             } else if (block.bType !== 'normal') this.spawnItem(block.x, block.y, block.bType);
             
-            // ボムアイテムのドロップ率低下
             if (this.s.bombDrop && Math.random() < 0.05) this.spawnItem(block.x, block.y, 'bomb_item');
         }
         this.blocks.splice(idx, 1);
-        save.total_points += Math.floor(10 * this.s.scoreMult); this.blocksDestroyed++;
+        save.total_points += Math.floor(10 * this.s.scoreMult); 
+        this.blocksDestroyed++;
     }
 
     triggerAOE(x, y, damage, radius) {
@@ -602,6 +609,7 @@ class Game {
             this.loseLife();
             if (!this.gameOver && !this.pendingRestart && this.balls.length === 0) this.spawnBall(canvas.width / 2, this.paddle.y - 30);
         }
+        
         let reachedLimit = false;
         this.blocks.forEach(b => { if (b.y >= 80 + 19 * this.ROW_H) reachedLimit = true; });
         if (reachedLimit) {
@@ -609,8 +617,11 @@ class Game {
             if (this.autoMode) { this.pendingRestart = true; return; }
             this.gameOver = true; save.save(); document.getElementById('btn-auto-stop').classList.add('hidden'); showEquipMenu("【 防衛失敗...ブロックが限界を突破しました 】"); return;
         }
-        if (this.blocksDestroyed >= this.columns && this.state !== 'BOSS') {
-            this.blocksDestroyed = 0; if (this.totalLayers >= 10 && this.totalLayers % 10 === 0) this.spawnBoss();
+
+        // ★ ブロック破壊数による進行 (6個消すごとに進む)
+        if (this.blocksDestroyed >= 6 && this.state !== 'BOSS') {
+            this.blocksDestroyed = 0; 
+            this.advanceLayer();
         }
     }
 
@@ -722,7 +733,6 @@ function showEquipMenu(msg) {
     updateAllEquipBtns();
 }
 
-// インベントリ画面の表示
 ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
     document.getElementById(`btn-${slotKey}`).addEventListener('click', () => {
         const catMap = { 'main': 'main', 'sub': 'sub', 'option': 'opt', 'acc1': 'acc', 'acc2': 'acc' };
@@ -760,15 +770,12 @@ function showEquipMenu(msg) {
             return div;
         };
         
-        // 「なし」を追加
         listEl.appendChild(createInvItem('none'));
         
-        // ガチャ装備
         GACHA_POOL.filter(k => ITEM_DEFS[k].cat === targetCat && save.item_counts[k] > 0).forEach(k => {
             listEl.appendChild(createInvItem(k));
         });
         
-        // カスタムドロップ装備
         Object.values(save.custom_items).filter(item => item.cat === targetCat).forEach(item => {
             listEl.appendChild(createInvItem(item.id, true));
         });
