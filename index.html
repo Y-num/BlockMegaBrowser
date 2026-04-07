@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEGA BREAKOUT V9</title>
+    <title>MEGA BREAKOUT V9.1</title>
     <style>
         body { margin: 0; padding: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; touch-action: none; user-select: none; }
         #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 800px; background: #1a1a2e; box-shadow: 0 0 10px rgba(0,0,0,0.5); overflow: hidden; }
@@ -35,6 +35,7 @@
         .inv-name { font-weight: bold; color: #ecf0f1; margin-bottom: 4px; display: block; }
         .inv-eff { font-size: 12px; color: #bdc3c7; }
         .inv-eff.demerit { color: #e74c3c; }
+        .inv-eff.disabled { color: #7f8c8d; text-decoration: line-through; }
     </style>
 </head>
 <body>
@@ -42,7 +43,7 @@
     <canvas id="gameCanvas"></canvas>
     <button id="btn-auto-stop" class="hidden">■ 自動操作モードを終了</button>
     <div id="title-layer" class="ui-layer">
-        <h1>MEGA BREAKOUT V9</h1>
+        <h1>MEGA BREAKOUT V9.1</h1>
         <div class="blink">画面をタップしてスタート</div>
     </div>
     
@@ -98,13 +99,12 @@ const Sound = {
 // ==========================================
 const ITEM_DEFS = {
     'none': {cat: 'none', name: '【空き】', short: 'なし'},
-    // MAIN
     'main_normal': {cat: 'main', name: 'ﾉｰﾏﾙﾎﾞｰﾙ', short: 'ﾎﾞｰﾙ威力'},
     'main_rapid': {cat: 'main', name: 'ﾗﾋﾟｯﾄﾞﾎﾞｰﾙ', short: 'ﾎﾞｰﾙ速度'},
     'main_pierce': {cat: 'main', name: '貫通ﾎﾞｰﾙ[RARE]', short: 'ﾎﾞｰﾙ貫通'},
     'main_exp_rad': {cat: 'main', name: '爆発ﾎﾞｰﾙ(広域)', short: 'ﾎﾞｰﾙ爆発範囲'},
     'main_exp_dmg': {cat: 'main', name: '爆発ﾎﾞｰﾙ(威力)', short: 'ﾎﾞｰﾙ爆発威力'},
-    // SUB (Laser is item-duration based, Missile is constant)
+    
     'sub_lsr_dmg': {cat: 'sub', name: 'ﾚｰｻﾞｰ(威力)', short: 'ﾚｰｻﾞｰ威力'},
     'sub_lsr_spd': {cat: 'sub', name: 'ﾚｰｻﾞｰ(速射)', short: 'ﾚｰｻﾞｰ速射'},
     'sub_lsr_prc': {cat: 'sub', name: 'ﾚｰｻﾞｰ(貫通)[RARE]', short: 'ﾚｰｻﾞｰ貫通'},
@@ -118,7 +118,7 @@ const ITEM_DEFS = {
     'sub_sat_spd': {cat: 'sub', name: '子機(移動速度)', short: '子機速度'},
     'sub_sat_cnt': {cat: 'sub', name: '子機(追加)', short: '子機数'},
     'sub_bomb_req': {cat: 'sub', name: 'ﾎﾞﾑ(ｺｽﾄ減)', short: 'ﾎﾞﾑｺｽﾄ削減'},
-    // OPT
+    
     'opt_ball_cnt': {cat: 'opt', name: '初期弾数追加[RARE]', short: '初期弾数'},
     'opt_rot_cnt': {cat: 'opt', name: '回転ﾊﾞﾘｱ(枚数)', short: '回転ﾊﾞﾘｱ枚数'},
     'opt_rot_size': {cat: 'opt', name: '回転ﾊﾞﾘｱ(ｻｲｽﾞ)', short: '回転ﾊﾞﾘｱｻｲｽﾞ'},
@@ -126,7 +126,7 @@ const ITEM_DEFS = {
     'opt_pill_size': {cat: 'opt', name: 'ﾄｰﾁｶ(ｻｲｽﾞ)', short: 'ﾄｰﾁｶｻｲｽﾞ'},
     'opt_pill_cnt': {cat: 'opt', name: 'ﾄｰﾁｶ(設置数)', short: 'ﾄｰﾁｶ数'},
     'opt_pill_hp': {cat: 'opt', name: 'ﾄｰﾁｶ(強度)', short: 'ﾄｰﾁｶ強度'},
-    // ACC
+    
     'acc_score_up': {cat: 'acc', name: '獲得ﾎﾟｲﾝﾄUP', short: 'ﾎﾟｲﾝﾄ獲得量'},
     'acc_life_up': {cat: 'acc', name: '最大ﾗｲﾌUP', short: '最大ﾗｲﾌ'}
 };
@@ -137,24 +137,24 @@ const APPLY_EFFECTS = {
     'main_normal': (l, s) => { s.mainDmg += l; },
     'main_rapid': (l, s) => { s.mainSpeed += l * 0.5; },
     'main_pierce': (l, s) => { s.mainPierce += l; },
-    'main_exp_rad': (l, s) => { s.mainExplodeRad += l * 10; }, // レベルに応じて露骨に広がる
-    'main_exp_dmg': (l, s) => { s.mainExplodeDmg += l; },
+    'main_exp_rad': (l, s) => { s.hasExp = true; s.mainExplodeRad += l * 10; },
+    'main_exp_dmg': (l, s) => { s.hasExp = true; s.mainExplodeDmg += l; },
 
     'sub_lsr_dmg': (l, s) => { s.lsrDmg += l; },
     'sub_lsr_spd': (l, s) => { s.lsrInterval = Math.max(2, 15 - l); },
     'sub_lsr_prc': (l, s) => { s.lsrPierce += l; },
-    'sub_lsr_thk': (l, s) => { s.lsrWidth += l * 3; }, // 太さが露骨に反映される
+    'sub_lsr_thk': (l, s) => { s.lsrWidth += l * 3; },
 
     'sub_msl_dmg': (l, s) => { s.hasMsl = true; s.mslDmg += l * 2; },
     'sub_msl_spd': (l, s) => { s.hasMsl = true; s.mslSpd += l * 0.2; },
-    'sub_msl_rad': (l, s) => { s.hasMsl = true; s.mslRad += l * 15; }, // 爆風が露骨に広がる
+    'sub_msl_rad': (l, s) => { s.hasMsl = true; s.mslRad += l * 15; },
     'sub_msl_cnt': (l, s) => { s.hasMsl = true; s.mslCnt += l; },
 
     'sub_sat_hp': (l, s) => { s.hasSat = true; s.satHp += l * 2; },
     'sub_sat_auto': (l, s) => { s.hasSat = true; s.satAuto = true; s.satSpd += l * 0.5; },
     'sub_sat_spd': (l, s) => { s.hasSat = true; s.satSpd += l * 1.0; },
     'sub_sat_cnt': (l, s) => { s.hasSat = true; s.satCnt += l; },
-    'sub_bomb_req': (l, s) => { s.bombDrop = true; s.bombReq -= l; },
+    'sub_bomb_req': (l, s) => { s.bombReq -= l; },
 
     'opt_ball_cnt': (l, s) => { s.optBalls += l; },
     'opt_rot_cnt': (l, s) => { s.rotCnt += l; },
@@ -168,26 +168,20 @@ const APPLY_EFFECTS = {
     'acc_life_up': (l, s) => { s.maxLife += l; }
 };
 
-// カスタム装備（エンチャント）生成
 function generateCustomDrop(layerCount, cat) {
     const id = 'drop_' + Date.now() + '_' + Math.floor(Math.random()*1000);
     
-    // ★ポジティブ効果は「その装備枠のカテゴリ」からのみ抽出
     let posPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none' && ITEM_DEFS[k].cat === cat);
-    if (posPool.length === 0) posPool = ['acc_score_up']; // フェイルセーフ
-    
-    // デメリットは全カテゴリから
+    if (posPool.length === 0) posPool = ['acc_score_up']; 
     let negPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none');
     
-    let posCount = Math.floor(Math.random() * 2) + 2; // 2〜3個
+    let posCount = Math.floor(Math.random() * 2) + 2; 
     let effects = [];
-    
-    // ★レベル幅を「階層 / 100」前後に適正化
     let basePower = Math.max(1, Math.floor(layerCount / 100));
     
     for(let i=0; i<posCount; i++) {
         let ef = posPool[Math.floor(Math.random() * posPool.length)];
-        let lvl = basePower + Math.floor(Math.random() * 2); // Base + (0 or 1)
+        let lvl = basePower + Math.floor(Math.random() * 2); 
         if (ef.includes('cnt') || ef.includes('life') || ef.includes('req')) lvl = Math.max(1, Math.floor(lvl / 3));
         effects.push({ type: ef, level: lvl });
     }
@@ -241,11 +235,11 @@ class Game {
 
     buildStats() {
         this.s = {
-            mainDmg: 1, mainPierce: 0, mainExplodeRad: 30, mainExplodeDmg: 0, mainSpeed: 4, optBalls: 0,
+            mainDmg: 1, mainPierce: 0, hasExp: false, mainExplodeRad: 40, mainExplodeDmg: 1, mainSpeed: 4, optBalls: 0,
             lsrInterval: 15, lsrPierce: 0, lsrWidth: 4, lsrDmg: 1,
             hasMsl: false, mslCnt: 1, mslSpd: 1.0, mslRad: 50, mslDmg: 1,
             hasSat: false, satCnt: 0, satHp: 1, satAuto: false, satSpd: 2,
-            bombDrop: false, bombReq: 20, rotCnt: 0, rotSize: 8, rotSpd: 0.05, pillCnt: 0, pillSize: 30, pillHp: 1,
+            bombDrop: true, bombReq: 20, rotCnt: 0, rotSize: 8, rotSpd: 0.05, pillCnt: 0, pillSize: 30, pillHp: 1,
             scoreMult: 1, maxLife: 3
         };
         
@@ -253,9 +247,18 @@ class Game {
             const itemId = save.loadout[slot];
             if (itemId === 'none') return;
             
+            let slotCat = slot.replace(/\d/, '');
+            if (slotCat === 'option') slotCat = 'opt';
+
             if (save.custom_items[itemId]) {
                 save.custom_items[itemId].effects.forEach(ef => {
-                    if (APPLY_EFFECTS[ef.type]) APPLY_EFFECTS[ef.type](ef.level, this.s);
+                    const def = ITEM_DEFS[ef.type];
+                    if (!def) return;
+                    if (ef.level > 0) {
+                        if (slotCat === 'opt' || def.cat === slotCat) APPLY_EFFECTS[ef.type](ef.level, this.s);
+                    } else {
+                        APPLY_EFFECTS[ef.type](ef.level, this.s);
+                    }
                 });
             } else {
                 const lvl = save.getLevel(itemId);
@@ -263,14 +266,13 @@ class Game {
             }
         });
 
-        // 破綻防止用クリップ
         if (this.s.maxLife < 1) this.s.maxLife = 1;
         if (this.s.mslSpd < 0.1) this.s.mslSpd = 0.1;
         if (this.s.rotCnt < 0) this.s.rotCnt = 0;
         if (this.s.satCnt < 0) this.s.satCnt = 0;
         if (this.s.pillCnt < 0) this.s.pillCnt = 0;
         if (this.s.bombReq < 5) this.s.bombReq = 5;
-        if (this.s.lsrWidth < 2) this.s.lsrWidth = 2; // レーザーが細くなりすぎないように
+        if (this.s.lsrWidth < 2) this.s.lsrWidth = 2;
         
         this.ROW_H = (this.ctrlY - 80) / 20; 
     }
@@ -278,7 +280,7 @@ class Game {
     resetGameVars() {
         this.stage = 1; this.totalLayers = 0; this.blocksDestroyed = 0; this.columns = 6;
         this.advanceTimer = 0; this.subTimer = 0; this.bossTimer = 0; this.bombCount = 0;
-        this.laserActiveTime = 0; this.giantActiveTime = 0; // ★時間制タイマー
+        this.laserActiveTime = 0; this.giantActiveTime = 0;
         this.balls = []; this.items = []; this.lasers = []; this.missiles = []; this.enemyBullets = [];
         this.blocks = []; this.fallingBlocks = []; this.effects = []; this.floatingTexts = [];
         this.barrierNodes = []; this.staticBarriers = []; this.satellites = [];
@@ -295,7 +297,7 @@ class Game {
         this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
         for (let i = 0; i < 5; i++) this.spawnRow(80 + (i * this.ROW_H));
         
-        const initialBalls = 1 + this.s.optBalls; // ★初期弾数
+        const initialBalls = 1 + this.s.optBalls;
         for (let i = 0; i < initialBalls; i++) {
             this.spawnBall(canvas.width / 2 + (Math.random()*20-10), this.paddle.y - 30);
         }
@@ -322,20 +324,26 @@ class Game {
     createBlock(x, y, w) {
         const r = Math.random(); let bType = 'normal', color = '#4cd964';
         
-        if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#7f8c8d'; } // ★ハードブロック
+        if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#7f8c8d'; }
         else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = 'red'; } 
         else if (r < 0.22) { bType = 'blue'; color = 'cyan'; } 
-        else if (r < 0.28) { bType = 'laser_item'; color = 'yellow'; } // ★レーザーアイテム源
-        else if (r < 0.32) { bType = 'giant_item'; color = '#9b59b6'; } // ★巨大化アイテム源
-        else if (r < 0.35 && this.stage >= 2) { bType = 'bomb'; color = '#2c3e50'; }
+        else if (r < 0.28) { bType = 'laser_item'; color = 'yellow'; } 
+        else if (r < 0.30) { bType = 'giant_item'; color = '#9b59b6'; } // ★確率2%に低下
+        else if (r < 0.35 && this.totalLayers >= 5) { bType = 'bomb'; color = '#2c3e50'; } // ★第5層から出現
         
         let hp = 1;
-        if (bType === 'normal' && (this.stage > 1 || this.totalLayers >= 4)) {
-            const maxHp = (this.stage * 2) + Math.floor(this.totalLayers / 3);
-            if (Math.random() < 0.2 + (this.stage * 0.15)) { hp = Math.floor(Math.random() * maxHp) + 1 + Math.floor(this.stage / 2); color = '#bdc3c7'; }
+        // ★低層でのHPブロック発生率の調整
+        if (bType === 'normal' && this.totalLayers >= 4) {
+            let hpRate = Math.min(0.05 + (this.totalLayers - 4) * 0.01, 0.4);
+            if (Math.random() < hpRate) {
+                const maxHp = 1 + Math.floor(this.totalLayers / 5);
+                hp = Math.floor(Math.random() * maxHp) + 1;
+                if (hp > 1) color = '#bdc3c7'; 
+            }
         }
-        if (bType === 'red') hp += this.stage;
-        if (bType === 'hard') hp = 3 + this.stage; // 硬め
+        
+        if (bType === 'red') hp += Math.floor(this.totalLayers / 10);
+        if (bType === 'hard') hp = 3 + Math.floor(this.totalLayers / 10);
         this.blocks.push({ x, y, w: w - 4, h: this.ROW_H - 4, color, bType, hp, cool: 0 });
     }
 
@@ -361,7 +369,7 @@ class Game {
         let c = 'white', w = 20;
         if (bType === 'blue') c = 'cyan'; 
         else if (bType === 'laser_item') c = 'yellow';
-        else if (bType === 'giant_item') { c = '#9b59b6'; bType = 'large_ball'; } // large_ballアイテムとして扱う
+        else if (bType === 'giant_item') { c = '#9b59b6'; bType = 'large_ball'; }
         else if (bType === 'boss_drop') { c = '#f39c12'; w = 25; } 
         else if (bType === 'bomb_item') { c = 'magenta'; w = 22; }
         this.items.push({ x, y, w, h: w, color: c, bType });
@@ -402,7 +410,6 @@ class Game {
     moveObjects() {
         this.subTimer++;
         
-        // ★ジャイアントボールの時間管理
         if (this.giantActiveTime > 0) {
             this.giantActiveTime--;
             this.balls.forEach(b => { b.isLarge = true; b.w = 28; b.h = 28; });
@@ -410,7 +417,6 @@ class Game {
             this.balls.forEach(b => { b.isLarge = false; b.w = 14; b.h = 14; });
         }
 
-        // ボール移動
         for (let i = this.balls.length - 1; i >= 0; i--) {
             let b = this.balls[i]; b.x += b.vx; b.y += b.vy;
             let hw = b.w / 2;
@@ -419,17 +425,14 @@ class Game {
             if (b.y > this.ctrlY) { this.balls.splice(i, 1); continue; }
         }
 
-        // ★時間制レーザーの発射
         if (this.laserActiveTime > 0) {
             this.laserActiveTime--;
             if (this.subTimer % this.s.lsrInterval === 0) {
-                // lsrWidthが太さとして明確に反映される
                 this.lasers.push({ x: this.paddle.x, y: this.paddle.y - 20, w: this.s.lsrWidth, h: 30, color: 'yellow', vy: -12, damage: this.s.lsrDmg, pierce: this.s.lsrPierce });
                 Sound.play('laser');
             }
         }
 
-        // ★常時ミサイルの発射
         if (this.s.hasMsl && this.subTimer % 120 === 0) {
             for(let i=0; i<this.s.mslCnt; i++) {
                 let dx = (i - (this.s.mslCnt-1)/2) * 30;
@@ -445,16 +448,12 @@ class Game {
         };
         moveArr(this.lasers); moveArr(this.enemyBullets); moveArr(this.fallingBlocks);
         
-        // ★ミサイル着弾判定と大爆発
         for (let i = this.missiles.length - 1; i >= 0; i--) {
             let m = this.missiles[i]; m.y += m.vy;
             let hit = false;
             for (let b of this.blocks) { if (intersect(m, b)) { hit = true; break; } }
             if (!hit && this.boss && intersect(m, this.boss)) hit = true;
-            if (hit) { 
-                this.triggerAOE(m.x, m.y, m.damage, m.radius); // 範囲爆発
-                this.missiles.splice(i, 1); 
-            }
+            if (hit) { this.triggerAOE(m.x, m.y, m.damage, m.radius); this.missiles.splice(i, 1); }
             else if (m.y < -50) this.missiles.splice(i, 1);
         }
 
@@ -480,7 +479,6 @@ class Game {
         }
         this.satellites.forEach(s => { s.x = this.satFormationX + s.dx; s.y = this.paddle.y - 30; });
         
-        // 時間経過で層が進む
         if (this.state !== 'BOSS') {
             this.advanceTimer += 1/60;
             let limit = Math.max(1.0, 10.0 - Math.floor(this.totalLayers / 100) * 1.0);
@@ -517,7 +515,6 @@ class Game {
     handleCollisions() {
         if (this.pendingRestart) return;
 
-        // ボールとパドル/子機の反射
         this.balls.forEach(ball => {
             this.satellites.forEach(sat => {
                 if (intersect(ball, sat) && ball.vy > 0) { ball.vy *= -1; ball.vx = (ball.x - sat.x) * 0.2; ball.pierce = this.s.mainPierce; Sound.play('hit'); }
@@ -526,7 +523,6 @@ class Game {
             if (ball.isLarge) { for (let i = this.enemyBullets.length - 1; i >= 0; i--) { if (intersect(ball, this.enemyBullets[i])) { Sound.play('coin'); this.enemyBullets.splice(i, 1); } } }
         });
 
-        // アイテム取得処理
         for (let i = this.items.length - 1; i >= 0; i--) { if (intersect(this.items[i], this.paddle)) { this.applyItem(this.items[i]); this.items.splice(i, 1); } }
         
         const checkHitObj = (objArr, bullet, onHit) => {
@@ -557,7 +553,6 @@ class Game {
             if (hit) { this.barrierNodes.splice(i, 1); this.s.rotCnt--; }
         }
 
-        // 自弾とブロックの衝突処理
         const projectiles = [...this.balls, ...this.lasers];
         projectiles.forEach(p => {
             let hitSomething = false;
@@ -570,8 +565,8 @@ class Game {
 
     applyItem(item) {
         if (item.bType === 'blue') this.spawnBall(this.paddle.x, this.paddle.y - 20);
-        else if (item.bType === 'large_ball') this.giantActiveTime = 300; // ★時間制
-        else if (item.bType === 'laser_item') this.laserActiveTime = 300; // ★時間制
+        else if (item.bType === 'large_ball') this.giantActiveTime = 300;
+        else if (item.bType === 'laser_item') this.laserActiveTime = 300;
         else if (item.bType === 'bomb_item') {
             this.bombCount++;
             if (this.bombCount >= this.s.bombReq) {
@@ -595,15 +590,13 @@ class Game {
         const block = this.blocks[blockIdx]; 
         const isLaser = (p.vy === -12);
         
-        // ★貫通不可ブロック（ハード）の処理
         if (block.bType === 'hard') {
             Sound.play('hit');
             if (isLaser) {
-                this.lasers = this.lasers.filter(l => l !== p); // レーザーはそこで消滅
+                this.lasers = this.lasers.filter(l => l !== p); 
             } else {
-                p.pierce = 0; p.vy *= -1; // 貫通力を0にして強制バウンス
+                p.pierce = 0; p.vy *= -1; 
             }
-            // 弾かれるが、ダメージ自体は通る
             let dmg = p.damage || 1; if (p.isLarge) dmg *= 3;
             block.hp -= dmg;
             if (block.hp <= 0) this.destroyBlock(blockIdx);
@@ -619,8 +612,7 @@ class Game {
         if (isLaser) { 
             if (p.pierce > 0) p.pierce--; else this.lasers = this.lasers.filter(l => l !== p); 
         } else { 
-            // ★爆発ボール処理
-            if (this.s.mainExplodeDmg > 0) this.triggerAOE(block.x, block.y, this.s.mainExplodeDmg, this.s.mainExplodeRad); 
+            if (this.s.hasExp) this.triggerAOE(block.x, block.y, this.s.mainExplodeDmg, this.s.mainExplodeRad); 
             if (p.pierce > 0) p.pierce--; else p.vy *= -1; 
         }
     }
@@ -642,7 +634,8 @@ class Game {
                 for (let a = 0; a < 360; a += 45) { const rad = a * Math.PI / 180; this.enemyBullets.push({ x: block.x, y: block.y, w: 10, h: 10, color: 'red', vx: Math.cos(rad)*4, vy: Math.sin(rad)*4 }); }
             } else if (block.bType !== 'normal' && block.bType !== 'hard') this.spawnItem(block.x, block.y, block.bType);
             
-            if (this.s.bombDrop && Math.random() < 0.05) this.spawnItem(block.x, block.y, 'bomb_item');
+            // ★ボム（B）の常時ドロップ (5%)
+            if (Math.random() < 0.05) this.spawnItem(block.x, block.y, 'bomb_item');
         }
         this.blocks.splice(idx, 1);
         save.total_points += Math.floor(10 * this.s.scoreMult); 
@@ -651,9 +644,8 @@ class Game {
 
     triggerAOE(x, y, damage, radius) {
         this.effects.push({ x, y, r: radius, life: 1.0, color: 'orange' }); Sound.play('explosion');
-        // 安全のため逆順ループで爆風巻き込み
         for (let i = this.blocks.length - 1; i >= 0; i--) {
-            if (this.blocks[i].bType === 'hard') continue; // ハードブロックは爆風に巻き込まれない
+            if (this.blocks[i].bType === 'hard') continue; 
             if (Math.hypot(this.blocks[i].x - x, this.blocks[i].y - y) <= radius) { 
                 this.blocks[i].hp -= damage; 
                 if (this.blocks[i].hp <= 0) this.destroyBlock(i); 
@@ -729,7 +721,7 @@ class Game {
         this.blocks.forEach(b => drawRect(b, true)); this.fallingBlocks.forEach(fb => drawRect(fb, true));
         this.items.forEach(i => { 
             drawRect(i); 
-            if(i.bType==='bomb_item') { ctx.fillStyle='white'; ctx.fillText('B', i.x, i.y+4); }
+            if(i.bType==='bomb_item') { ctx.fillStyle='white'; ctx.font='14px Helvetica-Bold'; ctx.fillText('B', i.x, i.y+5); }
             if(i.bType==='laser_item') { ctx.fillStyle='black'; ctx.font='14px Helvetica-Bold'; ctx.fillText('L', i.x, i.y+5); }
         });
         
@@ -836,7 +828,6 @@ function showEquipMenu(msg) {
                     let sName = def.short;
                     let isMerit = ef.level > 0;
                     
-                    // エンチャントの有効・無効判定
                     let isActive = true;
                     if (isMerit && targetCat !== 'opt' && targetCat !== 'acc' && def.cat !== targetCat) isActive = false;
                     
