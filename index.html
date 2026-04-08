@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MEGA BREAKOUT V20</title>
+    <title>MEGA BREAKOUT V21</title>
     <style>
         /* 見やすくクリーンなモダンデザイン */
         body { margin: 0; padding: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; user-select: none; -webkit-user-select: none; }
         #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 850px; background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
         
-        /* ゲーム画面のみスワイプ無効（メニューはスクロール可能に） */
+        /* ゲーム画面のみスワイプ無効 */
         canvas { display: block; width: 100%; height: 100%; touch-action: none; }
         
         ::-webkit-scrollbar { width: 6px; }
@@ -23,7 +23,8 @@
         .hidden { display: none !important; }
         .modal { z-index: 30; background: rgba(15, 23, 42, 0.98); }
 
-        .menu-content { width: 100%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 20px 0; box-sizing: border-box; }
+        /* ★ スクロールを滑らかにする設定を追加 */
+        .menu-content { width: 100%; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; align-items: center; padding: 20px 0; box-sizing: border-box; }
 
         #title-layer { cursor: pointer; }
         h1 { font-size: 32px; margin-bottom: 5px; color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); text-align: center; font-weight: 800; letter-spacing: 1px; }
@@ -35,7 +36,8 @@
         .stats-text { color: #38bdf8; font-size: 15px; margin: 5px 0; font-weight: bold; }
         .sub-text { font-size: 12px; color: #94a3b8; margin-bottom: 15px; text-align: center; }
         
-        button { font-family: inherit; outline: none; border: none; cursor: pointer; flex-shrink: 0; transition: transform 0.1s; }
+        /* すべてのボタンに適用する基本設定 */
+        button { font-family: inherit; outline: none; border: none; cursor: pointer; flex-shrink: 0; transition: transform 0.1s; touch-action: manipulation; }
         button:active { transform: scale(0.96); }
         
         .equip-btn { background: #334155; color: #f8fafc; width: 85%; padding: 14px; margin: 5px 0; font-size: 14px; border-radius: 8px; font-weight: 600; }
@@ -49,8 +51,9 @@
         
         #btn-auto-stop { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; padding: 10px 24px; font-size: 14px; border-radius: 30px; font-weight: bold; z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         
-        .list-box { width: 90%; max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; margin-top: 10px; }
-        .inv-item { background: #1e293b; border: 2px solid #334155; padding: 14px; border-radius: 8px; color: white; text-align: left; position: relative; }
+        /* ★ スクロールリストの設定 */
+        .list-box { width: 90%; max-height: 50vh; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; margin-top: 10px; }
+        .inv-item { background: #1e293b; border: 2px solid #334155; padding: 14px; border-radius: 8px; color: white; text-align: left; position: relative; width: 100%; box-sizing: border-box; }
         .inv-item.selected { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
         .inv-name { font-weight: bold; color: #f8fafc; margin-bottom: 6px; display: inline-block; width: 70%; font-size: 14px; pointer-events: none; }
         .inv-eff { font-size: 12px; color: #94a3b8; pointer-events: none; }
@@ -74,7 +77,7 @@
     <div id="title-layer" class="ui-layer">
         <div class="menu-content" style="pointer-events: none;">
             <h1>MEGA BREAKOUT</h1>
-            <div class="subtitle">VERSION 20 (RESTORED)</div>
+            <div class="subtitle">VERSION 21</div>
             <div class="blink">画面をタップしてスタート</div>
         </div>
     </div>
@@ -232,7 +235,6 @@ class SaveData {
         this.synth_items = data.synth_items || {};
         this.max_manual_layer = data.max_manual_layer || 0;
         
-        // データ保護
         ['main', 'sub', 'option', 'acc1', 'acc2'].forEach(slot => {
             const id = this.loadout[slot];
             if (id !== 'none' && !ITEM_DEFS[id] && !this.custom_items[id] && !this.synth_items[id]) {
@@ -390,7 +392,6 @@ class Game {
                 if(lbl) lbl.innerText = `手動最高到達: ${save.max_manual_layer}層`;
             }
         } else {
-            // オートモード時は最高到達層に達したらループ（リスタート）する
             if (this.totalLayers >= save.max_manual_layer && save.max_manual_layer > 0) {
                 this.pendingRestart = true; return;
             }
@@ -413,14 +414,14 @@ class Game {
     }
 
     createBlock(x, y, w) {
-        const r = Math.random(); let bType = 'normal', color = '#10b981'; // 緑
+        const r = Math.random(); let bType = 'normal', color = '#10b981'; 
         
-        if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#475569'; } // 灰
-        else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = '#ef4444'; } // 赤
-        else if (r < 0.22) { bType = 'blue'; color = '#3b82f6'; } // 青 (+1)
-        else if (r < 0.28) { bType = 'laser_item'; color = '#facc15'; } // 金 (L)
-        else if (r < 0.30) { bType = 'giant_item'; color = '#a855f7'; } // 紫
-        else if (r < 0.35 && this.totalLayers >= 5) { bType = 'bomb'; color = '#334155'; } // 黒 (B)
+        if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#475569'; }
+        else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = '#ef4444'; } 
+        else if (r < 0.22) { bType = 'blue'; color = '#3b82f6'; } 
+        else if (r < 0.28) { bType = 'laser_item'; color = '#facc15'; } 
+        else if (r < 0.30) { bType = 'giant_item'; color = '#a855f7'; } 
+        else if (r < 0.35 && this.totalLayers >= 5) { bType = 'bomb'; color = '#334155'; } 
         
         let hp = 1;
         if (bType === 'normal' && this.totalLayers >= 4) {
@@ -679,7 +680,7 @@ class Game {
         for (let i = this.items.length - 1; i >= 0; i--) { 
             if (intersect(this.items[i], this.paddle)) { 
                 let itemToApply = this.items.splice(i, 1)[0];
-                this.applyItem(itemToApply);
+                try { this.applyItem(itemToApply); } catch(e) { console.error("Item Apply Error", e); }
             } 
         }
     }
@@ -783,7 +784,6 @@ class Game {
             if (p.pierce > 0) p.pierce--; else this.lasers = this.lasers.filter(l => l !== p); 
         } else { 
             if (p.activeExpDmg > 0) this.triggerAOE(block.x, block.y, p.activeExpDmg, p.activeExpRad); 
-            
             if (p.activePierce > 0) {
                 p.activePierce--; 
             } else {
@@ -873,10 +873,8 @@ class Game {
             Sound.play('explosion');
             if (this.autoMode) { this.pendingRestart = true; return; }
             this.gameOver = true; save.save(); 
-            const btn = document.getElementById('btn-auto-stop');
-            if(btn) btn.classList.add('hidden'); 
-            showEquipMenu("防衛失敗..."); 
-            return;
+            document.getElementById('btn-auto-stop').classList.add('hidden'); 
+            window.showEquipMenu("防衛失敗..."); return;
         }
 
         if (this.blocksDestroyed >= 6 && this.state !== 'BOSS') {
@@ -890,9 +888,8 @@ class Game {
         if (this.lives <= 0) {
             if (this.autoMode) { this.pendingRestart = true; return; }
             this.gameOver = true; save.save(); 
-            const btn = document.getElementById('btn-auto-stop');
-            if(btn) btn.classList.add('hidden'); 
-            showEquipMenu("ゲームオーバー");
+            document.getElementById('btn-auto-stop').classList.add('hidden'); 
+            window.showEquipMenu("ゲームオーバー");
         } else {
             this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
         }
@@ -998,26 +995,28 @@ class Game {
         canvas.addEventListener('mousemove', (e) => { if(e.buttons > 0) handleMove(e.clientX); });
     }
 }
-let game;
+window.game = new Game();
 
 // ==========================================
-// 5. 安全で確実なイベントリスナー付与
+// 5. ボタンクリック設定 (標準で安全な方式)
 // ==========================================
 let synthSelected = [];
 
-function showEquipMenu(msg) {
-    if(game) game.state = 'EQUIP'; 
-    document.getElementById('title-layer').classList.add('hidden'); 
-    document.getElementById('equip-layer').classList.remove('hidden'); 
-    document.getElementById('inventory-modal').classList.add('hidden'); 
-    document.getElementById('synth-modal').classList.add('hidden'); 
-    document.getElementById('stats-modal').classList.add('hidden');
+function eId(id) { return document.getElementById(id); }
+
+window.showEquipMenu = function(msg) {
+    if(window.game) game.state = 'EQUIP'; 
+    eId('title-layer').classList.add('hidden'); 
+    eId('equip-layer').classList.remove('hidden'); 
+    eId('inventory-modal').classList.add('hidden'); 
+    eId('synth-modal').classList.add('hidden'); 
+    eId('stats-modal').classList.add('hidden');
     
-    document.getElementById('equip-title').innerText = msg ? msg : '装備変更 & 再挑戦';
-    document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
-    document.getElementById('auto-max-label').innerText = `手動最高到達: ${save.max_manual_layer}層`;
+    eId('equip-title').innerText = msg ? msg : '装備変更 & 再挑戦';
+    eId('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
+    eId('auto-max-label').innerText = `手動最高到達: ${save.max_manual_layer}層`;
     updateAllEquipBtns();
-}
+};
 
 function updateAllEquipBtns() {
     ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
@@ -1034,49 +1033,40 @@ function updateAllEquipBtns() {
             }
         }
         const label = {'main':'MAIN', 'sub':'SUB', 'option':'OPT', 'acc1':'ACC(1)', 'acc2':'ACC(2)'}[slotKey];
-        const btn = document.getElementById(`btn-${slotKey}`);
+        const btn = eId(`btn-${slotKey}`);
         if(btn) btn.innerText = `${label} : ${name}`;
     });
 }
 
-function safeBind(id, callback) {
-    const el = document.getElementById(id);
-    if(el) {
-        el.addEventListener('click', callback);
-        el.addEventListener('touchstart', (e) => { if(e.cancelable) e.preventDefault(); callback(e); }, {passive: false});
-    }
-}
-
+// 全てのボタンアクションをJavaScriptで紐付け
 window.onload = function() {
-    game = new Game();
+    eId('title-layer').onclick = () => { Sound.play('coin'); showEquipMenu(""); };
     
-    safeBind('title-layer', () => { Sound.play('coin'); showEquipMenu(""); });
+    eId('btn-main').onclick = () => openInventory('main');
+    eId('btn-sub').onclick = () => openInventory('sub');
+    eId('btn-option').onclick = () => openInventory('option');
+    eId('btn-acc1').onclick = () => openInventory('acc1');
+    eId('btn-acc2').onclick = () => openInventory('acc2');
     
-    safeBind('btn-main', () => openInventory('main'));
-    safeBind('btn-sub', () => openInventory('sub'));
-    safeBind('btn-option', () => openInventory('option'));
-    safeBind('btn-acc1', () => openInventory('acc1'));
-    safeBind('btn-acc2', () => openInventory('acc2'));
+    eId('btn-stats-show').onclick = showStats;
+    eId('btn-stats-close').onclick = () => { eId('stats-modal').classList.add('hidden'); showEquipMenu(""); };
     
-    safeBind('btn-stats-show', showStats);
-    safeBind('btn-stats-close', () => { document.getElementById('stats-modal').classList.add('hidden'); showEquipMenu(""); });
+    eId('btn-gacha-1').onclick = () => pullGacha(false);
+    eId('btn-gacha-all').onclick = () => pullGacha(true);
+    eId('btn-synth-menu').onclick = openSynth;
     
-    safeBind('btn-gacha-1', () => pullGacha(false));
-    safeBind('btn-gacha-all', () => pullGacha(true));
-    safeBind('btn-synth-menu', openSynth);
+    eId('btn-start').onclick = () => { eId('equip-layer').classList.add('hidden'); game.autoMode = false; game.initGame(); };
+    eId('btn-auto-start').onclick = () => { eId('equip-layer').classList.add('hidden'); eId('btn-auto-stop').classList.remove('hidden'); game.autoMode = true; game.initGame(); };
+    eId('btn-auto-stop').onclick = () => { game.autoMode = false; eId('btn-auto-stop').classList.add('hidden'); Sound.play('coin'); };
     
-    safeBind('btn-start', () => { document.getElementById('equip-layer').classList.add('hidden'); game.autoMode = false; game.initGame(); });
-    safeBind('btn-auto-start', () => { document.getElementById('equip-layer').classList.add('hidden'); document.getElementById('btn-auto-stop').classList.remove('hidden'); game.autoMode = true; game.initGame(); });
-    safeBind('btn-auto-stop', () => { game.autoMode = false; document.getElementById('btn-auto-stop').classList.add('hidden'); Sound.play('coin'); });
-    
-    safeBind('btn-inv-close', () => { document.getElementById('inventory-modal').classList.add('hidden'); showEquipMenu(""); });
-    safeBind('btn-synth-close', () => { document.getElementById('synth-modal').classList.add('hidden'); showEquipMenu(""); });
-    safeBind('btn-synth-exec', execSynth);
+    eId('btn-inv-close').onclick = () => { eId('inventory-modal').classList.add('hidden'); showEquipMenu(""); };
+    eId('btn-synth-close').onclick = () => { eId('synth-modal').classList.add('hidden'); showEquipMenu(""); };
+    eId('btn-synth-exec').onclick = execSynth;
 };
 
 function showStats() {
     const s = calcCurrentStats();
-    const listEl = document.getElementById('stats-list');
+    const listEl = eId('stats-list');
     listEl.innerHTML = '';
 
     const addStat = (title, vals) => {
@@ -1119,18 +1109,18 @@ function showStats() {
         {label: '移動速度', val: Number(s.satSpd).toFixed(1)}
     ]);
 
-    document.getElementById('equip-layer').classList.add('hidden');
-    document.getElementById('stats-modal').classList.remove('hidden');
+    eId('equip-layer').classList.add('hidden');
+    eId('stats-modal').classList.remove('hidden');
 }
 
 function openInventory(slotKey) {
     const catMap = { 'main': 'main', 'sub': 'sub', 'option': 'opt', 'acc1': 'acc', 'acc2': 'acc' };
     const targetCat = catMap[slotKey];
-    const listEl = document.getElementById('inv-list');
+    const listEl = eId('inv-list');
     listEl.innerHTML = '';
     
     const createInvItem = (itemId, itemData = null) => {
-        const btn = document.createElement('div');
+        const btn = document.createElement('button'); // ★スクロールを邪魔しないbutton要素を使用
         btn.className = 'inv-item';
         
         if (itemData) {
@@ -1143,7 +1133,6 @@ function openInventory(slotKey) {
                 let sName = def.short;
                 let actualLevel = (Number(ef.level) || 0) * itemLvl; 
                 let isMerit = actualLevel > 0;
-                
                 let isActive = true;
                 if (isMerit && targetCat !== 'opt' && targetCat !== 'acc' && def.cat !== targetCat && itemData.cat !== 'mix') isActive = false;
                 
@@ -1154,20 +1143,17 @@ function openInventory(slotKey) {
             let nameHtml = `<span class="inv-name">${itemData.name} [Lv.${itemLvl}]</span>`;
             
             if (!itemData.id.startsWith('synth_')) {
-                const sellBtn = document.createElement('button');
+                const sellBtn = document.createElement('div');
                 sellBtn.className = 'btn-sell';
                 sellBtn.innerText = '売却';
-                const doSell = (e) => {
+                sellBtn.onclick = (e) => {
                     e.stopPropagation(); e.preventDefault();
                     delete save.custom_items[itemId];
                     if(save.loadout[slotKey] === itemId) save.loadout[slotKey] = 'none';
                     save.total_points += 500;
                     save.save(); Sound.play('coin'); btn.remove();
-                    document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
+                    eId('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
                 };
-                sellBtn.addEventListener('click', doSell);
-                sellBtn.addEventListener('touchstart', doSell, {passive: false});
-                
                 btn.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
                 btn.appendChild(sellBtn);
             } else {
@@ -1182,17 +1168,13 @@ function openInventory(slotKey) {
             btn.innerText = name;
         }
         
-        const doEquip = (e) => {
+        btn.onclick = (e) => {
             if(e.target.className === 'btn-sell') return;
-            e.preventDefault();
             save.loadout[slotKey] = itemId;
             save.save(); Sound.play('coin');
-            document.getElementById('inventory-modal').classList.add('hidden');
+            eId('inventory-modal').classList.add('hidden');
             showEquipMenu("");
         };
-        btn.addEventListener('click', doEquip);
-        btn.addEventListener('touchstart', doEquip, {passive: false});
-        
         return btn;
     };
     
@@ -1208,21 +1190,21 @@ function openInventory(slotKey) {
         listEl.appendChild(createInvItem(item.id, item));
     });
     
-    document.getElementById('equip-layer').classList.add('hidden');
-    document.getElementById('inventory-modal').classList.remove('hidden');
+    eId('equip-layer').classList.add('hidden');
+    eId('inventory-modal').classList.remove('hidden');
 }
 
 function openSynth() {
-    document.getElementById('equip-layer').classList.add('hidden'); 
-    document.getElementById('synth-modal').classList.remove('hidden');
+    eId('equip-layer').classList.add('hidden'); 
+    eId('synth-modal').classList.remove('hidden');
     synthSelected = [];
     refreshSynthList();
 }
 
 function refreshSynthList() {
-    const listEl = document.getElementById('synth-list');
+    const listEl = eId('synth-list');
     listEl.innerHTML = '';
-    const execBtn = document.getElementById('btn-synth-exec');
+    const execBtn = eId('btn-synth-exec');
     
     let lv20Items = GACHA_POOL.filter(k => save.getLevel(k) === 20);
     
@@ -1233,12 +1215,11 @@ function refreshSynthList() {
     }
 
     lv20Items.forEach(itemId => {
-        const btn = document.createElement('div');
+        const btn = document.createElement('button');
         btn.className = 'inv-item' + (synthSelected.includes(itemId) ? ' selected' : '');
         btn.innerText = `${ITEM_DEFS[itemId].name} [Lv.20 MAX]`;
         
-        const doSelect = (e) => {
-            e.preventDefault();
+        btn.onclick = () => {
             if (synthSelected.includes(itemId)) {
                 synthSelected = synthSelected.filter(id => id !== itemId);
             } else {
@@ -1246,9 +1227,6 @@ function refreshSynthList() {
             }
             refreshSynthList();
         };
-        btn.addEventListener('click', doSelect);
-        btn.addEventListener('touchstart', doSelect, {passive: false});
-        
         listEl.appendChild(btn);
     });
 
@@ -1261,7 +1239,6 @@ function refreshSynthList() {
 
 function execSynth() {
     if (synthSelected.length !== 2) return;
-    
     let keys = [...synthSelected].sort();
     let synthId = 'synth_' + keys.join('_');
     
