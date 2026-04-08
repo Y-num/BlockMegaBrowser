@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MEGA BREAKOUT V15.1</title>
+    <title>MEGA BREAKOUT V16.1</title>
     <style>
         /* 見やすくクリーンなモダンデザイン + タップ干渉完全防止 */
         body { margin: 0; padding: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
@@ -17,11 +17,10 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: rgba(15, 23, 42, 0.95); z-index: 10; color: #f8fafc; 
-            touch-action: manipulation; /* タップ遅延防止 */
+            touch-action: manipulation; 
         }
         .hidden { display: none !important; }
         
-        /* モーダルは手前に表示 */
         #inventory-modal, #synth-modal, #stats-modal { z-index: 30; background: rgba(15, 23, 42, 0.98); }
 
         .menu-content { width: 100%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 20px 0; box-sizing: border-box; }
@@ -74,7 +73,7 @@
     <div id="title-layer" class="ui-layer">
         <div class="menu-content">
             <h1>MEGA BREAKOUT</h1>
-            <div class="subtitle">VERSION 15.1</div>
+            <div class="subtitle">VERSION 16.1</div>
             <div class="blink">画面をタップしてスタート</div>
         </div>
     </div>
@@ -196,21 +195,25 @@ const APPLY_EFFECTS = {
     'main_pierce': (l, s) => { s.mainPierce += l; },
     'main_exp_rad': (l, s) => { s.hasExp = true; s.mainExplodeRad += l * 10; },
     'main_exp_dmg': (l, s) => { s.hasExp = true; s.mainExplodeDmg += l; },
+
     'sub_lsr_dmg': (l, s) => { s.lsrDmg += l; },
     'sub_lsr_spd': (l, s) => { s.lsrInterval = Math.max(4, 40 - l * 2); },
     'sub_lsr_prc': (l, s) => { s.lsrPierce += l; },
     'sub_lsr_thk': (l, s) => { s.lsrWidth += l * 3; },
+
     'sub_msl_dmg': (l, s) => { s.hasMsl = true; s.mslDmg += l * 2; },
     'sub_msl_spd': (l, s) => { s.hasMsl = true; s.mslSpd += l * 0.2; },
     'sub_msl_rad': (l, s) => { s.hasMsl = true; s.mslRad += l * 15; },
     'sub_msl_cnt': (l, s) => { s.hasMsl = true; s.mslCnt += l; },
     'sub_bomb_req': (l, s) => { s.bombReq -= l; },
+
     'opt_rot_cnt': (l, s) => { s.rotCnt += l; },
     'opt_rot_size': (l, s) => { s.rotSize += l * 2; },
     'opt_rot_spd': (l, s) => { s.rotSpd += l * 0.01; },
     'opt_pill_size': (l, s) => { s.pillSize += l * 4; },
     'opt_pill_cnt': (l, s) => { s.pillCnt += l; },
     'opt_pill_hp': (l, s) => { s.pillHp += l * 2; },
+
     'acc_ball_cnt': (l, s) => { s.accBalls += l; },
     'acc_sat_hp': (l, s) => { s.satHp += l * 2; },
     'acc_sat_spd': (l, s) => { s.satSpd += l * 1.5; },
@@ -390,7 +393,9 @@ class Game {
     }
 
     createBlock(x, y, w) {
-        const r = Math.random(); let bType = 'normal', color = '#10b981'; 
+        const r = Math.random(); 
+        // ★ V16：視認性の高い色へ変更
+        let bType = 'normal', color = '#10b981'; // エメラルドグリーン
         
         if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#475569'; }
         else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = '#ef4444'; } 
@@ -517,7 +522,8 @@ class Game {
         if (this.s.hasMsl && this.subTimer % 120 === 0) {
             for(let i=0; i<this.s.mslCnt; i++) {
                 let dx = (i - (this.s.mslCnt-1)/2) * 30;
-                this.missiles.push({ x: this.paddle.x + dx, y: this.paddle.y - 20, w: 8, h: 18, vy: -this.s.mslSpd, damage: this.s.mslDmg, radius: this.s.mslRad, color: '#f97316' });
+                // ★ミサイルの幅を細めにしてアイコン描画スペースを確保
+                this.missiles.push({ x: this.paddle.x + dx, y: this.paddle.y - 20, w: 8, h: 20, vy: -this.s.mslSpd, damage: this.s.mslDmg, radius: this.s.mslRad, color: '#f97316' });
             }
         }
         
@@ -580,6 +586,7 @@ class Game {
                     }
                 });
                 targetX += sep + (i % 2 === 0 ? 10 : -10);
+
                 let moveSpd = this.s.satSpd;
                 sat.x += (targetX - sat.x) * (moveSpd * 0.03) + Math.sign(targetX - sat.x) * (moveSpd * 0.5);
                 sat.x = Math.max(sat.w/2, Math.min(canvas.width - sat.w/2, sat.x));
@@ -813,7 +820,7 @@ class Game {
 
         if (this.boss.hp <= 0) {
             save.total_points += Math.floor(500 * this.s.scoreMult);
-            let dropRate = 0.30;
+            let dropRate = this.autoMode ? 0.005 : 0.30;
             const r = Math.random(); if (r < dropRate) this.spawnItem(this.boss.x, this.boss.y, 'boss_drop'); else if (r < dropRate + 0.4) this.spawnItem(this.boss.x, this.boss.y, 'large_ball');
             this.boss = null; this.state = 'PLAYING'; Sound.play('explosion');
             this.stage++;
@@ -856,11 +863,14 @@ class Game {
         ctx.fillStyle = this.state === 'TITLE' ? '#0f172a' : '#1e293b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (this.state === 'TITLE' || this.state === 'EQUIP') return;
 
+        // Danger Line
         ctx.strokeStyle = 'rgba(239, 68, 68, 0.3)'; ctx.beginPath(); ctx.moveTo(0, this.topMargin + 19 * this.ROW_H); ctx.lineTo(canvas.width, this.topMargin + 19 * this.ROW_H); ctx.stroke();
         
+        // Control Area
         ctx.fillStyle = '#0f172a'; ctx.fillRect(0, this.ctrlY, canvas.width, canvas.height - this.ctrlY);
         ctx.fillStyle = 'rgba(56, 189, 248, 0.5)'; ctx.fillRect(0, this.ctrlY, canvas.width, 2);
         
+        // HUD
         let safeTop = 35; 
         ctx.fillStyle = 'rgba(15, 23, 42, 0.9)'; ctx.fillRect(0, 0, canvas.width, 50 + safeTop);
         ctx.fillStyle = '#38bdf8'; ctx.font = '14px Helvetica-Bold'; ctx.textAlign = 'center';
@@ -877,6 +887,7 @@ class Game {
 
         this.blocks.forEach(b => {
             drawRect(b, true);
+            // ★ V16：青ブロック(+1テキスト)・ボム(✖)・通常HP表示
             if (b.bType === 'blue') { ctx.fillStyle = '#fff'; ctx.font = '12px Helvetica-Bold'; ctx.fillText('+1', b.x, b.y + 4); }
             else if (b.hp > 1 && b.bType !== 'bomb') { ctx.fillStyle = (b.bType==='hard')?'#fff':'#111'; ctx.font = '12px Helvetica-Bold'; ctx.fillText(b.hp, b.x, b.y + 4); }
             else if (b.bType === 'bomb') { ctx.fillStyle = '#fff'; ctx.font = '12px Helvetica-Bold'; ctx.fillText('✖', b.x, b.y + 4); }
@@ -897,6 +908,7 @@ class Game {
         this.enemyBullets.forEach(b => drawRect(b)); 
         this.lasers.forEach(l => drawRect(l)); 
         
+        // ★ V16：ミサイル専用の描画 (▲マーク)
         this.missiles.forEach(m => { 
             ctx.fillStyle = m.color; 
             ctx.fillRect(m.x - m.w/2, m.y - m.h/2, m.w, m.h);
@@ -967,7 +979,8 @@ const startTitle = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     Sound.play('coin'); showEquipMenu("");
 };
-titleLayer.addEventListener('click', startTitle);
+titleLayer.addEventListener('touchstart', startTitle, {passive: false});
+titleLayer.addEventListener('mousedown', startTitle);
 
 function updateAllEquipBtns() {
     ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
@@ -1000,6 +1013,7 @@ function showEquipMenu(msg) {
     updateAllEquipBtns();
 }
 
+// ★ V16：ステータス画面表示
 document.getElementById('btn-stats-show').addEventListener('click', () => {
     const s = calcCurrentStats();
     const listEl = document.getElementById('stats-list');
@@ -1014,8 +1028,7 @@ document.getElementById('btn-stats-show').addEventListener('click', () => {
 
     addStat('基本・パドル', [
         {label: '最大ライフ', val: s.maxLife},
-        {label: 'スコア倍率', val: `x${s.scoreMult.toFixed(1)}`},
-        {label: '初期追加ボール', val: `+${s.accBalls}`}
+        {label: 'スコア倍率', val: `x${s.scoreMult.toFixed(1)}`}
     ]);
     addStat('メイン (ボール)', [
         {label: '基本威力', val: s.mainDmg},
@@ -1035,6 +1048,7 @@ document.getElementById('btn-stats-show').addEventListener('click', () => {
         {label: '飛行速度', val: s.mslSpd.toFixed(1)}
     ]);
     addStat('オプション (防衛陣地)', [
+        {label: '初期追加ボール', val: `+${s.optBalls} 個`},
         {label: '回転バリア', val: s.rotCnt > 0 ? `${s.rotCnt}枚 (ｻｲｽﾞ${s.rotSize})` : '0枚'},
         {label: '固定トーチカ', val: s.pillCnt > 0 ? `${s.pillCnt}基 (強度${s.pillHp})` : '0基'}
     ]);
