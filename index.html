@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEGA BREAKOUT V13.1</title>
+    <title>MEGA BREAKOUT V13.2</title>
     <style>
         /* タップ干渉を完全に防ぐリセット設定 */
         body { margin: 0; padding: 0; background: #0b0f19; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -15,21 +15,21 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
         
-        /* ガラス風を廃止し、タッチバグが起きないソリッドなUIレイヤーに変更 */
+        /* ★修正: justify-content: center を追加して画面中央に自動調整 */
         .ui-layer { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            display: flex; flex-direction: column; align-items: center; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
             background: rgba(15, 20, 35, 0.98);
             z-index: 10; color: white; touch-action: manipulation; 
+            overflow-y: auto; padding: 20px 0; box-sizing: border-box;
         }
         .hidden { display: none !important; }
         
-        #title-layer { justify-content: center; background: radial-gradient(circle, #1a2540 0%, #0b0f19 100%); cursor: pointer; }
+        #title-layer { background: radial-gradient(circle, #1a2540 0%, #0b0f19 100%); cursor: pointer; }
         h1 { font-size: 34px; margin-bottom: 20px; text-shadow: 0 0 15px cyan; text-align: center; font-weight: 900; letter-spacing: 2px; }
         .blink { font-size: 16px; animation: blinker 1.5s linear infinite; padding: 20px; color: #bdc3c7; }
         @keyframes blinker { 50% { opacity: 0.3; } }
         
-        #equip-layer { padding-top: 8%; box-sizing: border-box; overflow-y: auto; }
         h2 { font-size: 22px; margin: 5px 0; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
         #pt-label { color: #00ffff; font-size: 16px; margin: 5px 0 10px 0; font-weight: bold; }
         #gacha-msg { color: #f1c40f; font-size: 13px; min-height: 20px; margin-bottom: 5px; font-weight: bold; text-align: center; padding: 0 10px;}
@@ -41,20 +41,21 @@
             border: 1px solid rgba(255,255,255,0.1); width: 85%; padding: 12px; margin: 5px 0; 
             font-size: 14px; border-radius: 12px; cursor: pointer; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s; 
+            flex-shrink: 0;
         }
         .equip-btn:active { transform: scale(0.96); background: #1a252f; }
         
-        .gacha-box { display: flex; gap: 4%; width: 85%; margin-top: 10px; }
+        .gacha-box { display: flex; gap: 4%; width: 85%; margin-top: 10px; flex-shrink: 0; }
         .btn-gacha { flex: 1; background: linear-gradient(145deg, #e67e22, #d35400); color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .btn-gacha:active { transform: scale(0.96); }
         .btn-synth { flex: 1; background: linear-gradient(145deg, #9b59b6, #8e44ad); color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .btn-synth:active { transform: scale(0.96); }
         
-        .btn-start { background: linear-gradient(145deg, #2ecc71, #27ae60); color: white; margin-top: 20px; font-size: 16px; cursor: pointer; padding: 12px; font-weight: bold; border: none; border-radius: 12px; width: 85%; text-align: center; box-shadow: 0 4px 10px rgba(46,204,113,0.4); display: block; }
-        .btn-auto-start { background: rgba(0,0,0,0.3); color: #f39c12; margin-top: 12px; margin-bottom: 20px; font-size: 14px; cursor: pointer; padding: 10px; font-weight: bold; border: 1px solid #f39c12; border-radius: 12px; width: 85%; text-align: center; display: block; }
+        .btn-start { background: linear-gradient(145deg, #2ecc71, #27ae60); color: white; margin-top: 20px; font-size: 16px; cursor: pointer; padding: 12px; font-weight: bold; border: none; border-radius: 12px; width: 85%; text-align: center; box-shadow: 0 4px 10px rgba(46,204,113,0.4); display: block; flex-shrink: 0; }
+        .btn-auto-start { background: rgba(0,0,0,0.3); color: #f39c12; margin-top: 12px; margin-bottom: 20px; font-size: 14px; cursor: pointer; padding: 10px; font-weight: bold; border: 1px solid #f39c12; border-radius: 12px; width: 85%; text-align: center; display: block; flex-shrink: 0; }
         
         #btn-auto-stop { 
-            position: absolute; top: 60px; left: 50%; transform: translateX(-50%); 
+            position: absolute; top: 65px; left: 50%; transform: translateX(-50%); 
             background: linear-gradient(135deg, #ff4757, #e74c3c); color: white; 
             border: 1px solid rgba(255,255,255,0.5); padding: 8px 20px; font-size: 13px; 
             border-radius: 20px; font-weight: bold; cursor: pointer; 
@@ -62,9 +63,9 @@
         }
         #btn-auto-stop:active { transform: translateX(-50%) scale(0.95); }
         
-        .modal { z-index: 30; padding-top: 8%; background: #0a0f1e; }
-        .list-box { width: 90%; height: 70%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; margin-top: 10px; }
-        .inv-item { background: #1a2535; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; cursor: pointer; color: white; text-align: left; font-size: 14px; line-height: 1.4; position: relative; }
+        .modal { z-index: 30; background: #0a0f1e; }
+        .list-box { width: 90%; height: 65%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; margin-top: 10px; border-radius: 8px; }
+        .inv-item { background: #1a2535; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; cursor: pointer; color: white; text-align: left; font-size: 14px; line-height: 1.4; position: relative; flex-shrink: 0; }
         .inv-item:active { transform: scale(0.98); background: #2c3e50; }
         .inv-item.selected { border: 2px solid #f1c40f; background: rgba(241,196,15,0.1); }
         .inv-name { font-weight: bold; color: #ecf0f1; margin-bottom: 6px; display: inline-block; width: 75%; }
@@ -80,7 +81,7 @@
     <button id="btn-auto-stop" class="hidden">■ 自動操作を終了</button>
     
     <div id="title-layer" class="ui-layer">
-        <h1>MEGA BREAKOUT<br><span style="font-size:20px; color:#f1c40f;">V13.1</span></h1>
+        <h1>MEGA BREAKOUT<br><span style="font-size:20px; color:#f1c40f;">V13.2</span></h1>
         <div class="blink">画面をタップしてスタート</div>
     </div>
     
@@ -108,14 +109,14 @@
     <div id="inventory-modal" class="ui-layer modal hidden">
         <h2 id="inv-title">装備を選択</h2>
         <div id="inv-list" class="list-box"></div>
-        <button id="btn-inv-close" class="equip-btn" style="margin-top: 10px; background: linear-gradient(145deg, #e74c3c, #c0392b);">戻る</button>
+        <button id="btn-inv-close" class="equip-btn" style="margin-top: 15px; background: linear-gradient(145deg, #e74c3c, #c0392b);">戻る</button>
     </div>
 
     <div id="synth-modal" class="ui-layer modal hidden">
         <h2>装備合成 (Lv.20同士)</h2>
-        <p style="font-size:12px; color:#bdc3c7;">LvMAXのガチャ装備を2つ選択してください</p>
+        <p style="font-size:12px; color:#bdc3c7; margin: 5px 0;">LvMAXのガチャ装備を2つ選択してください</p>
         <div id="synth-list" class="list-box"></div>
-        <button id="btn-synth-exec" class="equip-btn" style="background: linear-gradient(145deg, #9b59b6, #8e44ad);">合成実行 (2つ選択)</button>
+        <button id="btn-synth-exec" class="equip-btn" style="background: linear-gradient(145deg, #9b59b6, #8e44ad); margin-top: 15px;">合成実行 (2つ選択)</button>
         <button id="btn-synth-close" class="equip-btn" style="margin-top: 5px; background: linear-gradient(145deg, #e74c3c, #c0392b);">戻る</button>
     </div>
 </div>
@@ -215,7 +216,7 @@ const APPLY_EFFECTS = {
 class SaveData {
     constructor() { this.load(); }
     load() {
-        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v13')) || {}; } catch(e) {}
+        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v12')) || {}; } catch(e) {}
         this.loadout = data.loadout || {main: 'main_normal', sub: 'none', option: 'none', acc1: 'none', acc2: 'none'};
         this.total_points = data.total_points || 0;
         this.item_counts = data.item_counts || {'main_normal': 1};
@@ -223,7 +224,7 @@ class SaveData {
         this.synth_items = data.synth_items || {};
         this.max_manual_layer = data.max_manual_layer || 0;
     }
-    save() { try { localStorage.setItem('megabreakout_save_v13', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
+    save() { try { localStorage.setItem('megabreakout_save_v12', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
     getLevel(itemId) {
         if (itemId === 'none') return 0;
         const c = this.item_counts[itemId] || 0; if (c <= 0) return 0;
@@ -234,10 +235,8 @@ const save = new SaveData();
 
 function generateCustomDrop(layerCount, cat) {
     const id = 'drop_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-    
     let posPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none' && ITEM_DEFS[k].cat === cat);
     if (!posPool || posPool.length === 0) posPool = ['acc_score_up']; 
-    
     let negPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none');
     if (!negPool || negPool.length === 0) negPool = ['acc_score_up'];
     
@@ -263,7 +262,6 @@ function generateCustomDrop(layerCount, cat) {
     const typeNames = {'main':'主砲', 'sub':'副兵装', 'opt':'支援機', 'acc':'宝具'};
     let safeCatName = typeNames[cat] || '兵装';
     let name = prefixes[Math.floor(Math.random()*prefixes.length)] + safeCatName + ' No.' + Math.floor(Math.random()*99);
-    
     return { id, cat, name, effects };
 }
 
@@ -304,12 +302,10 @@ class Game {
             if (save.custom_items[itemId] || save.synth_items[itemId]) {
                 const itemData = save.custom_items[itemId] || save.synth_items[itemId];
                 const itemLvl = itemData.level || 1;
-                
                 itemData.effects.forEach(ef => {
                     const def = ITEM_DEFS[ef.type];
                     if (!def) return;
                     const actualLevel = ef.level * itemLvl;
-                    
                     if (actualLevel > 0) {
                         if (slotCat === 'opt' || slotCat === 'acc' || def.cat === slotCat || itemData.cat === 'mix') {
                             APPLY_EFFECTS[ef.type](actualLevel, this.s);
@@ -371,8 +367,7 @@ class Game {
             }
         } else {
             if (this.totalLayers >= save.max_manual_layer && save.max_manual_layer > 0) {
-                this.pendingRestart = true;
-                return;
+                this.pendingRestart = true; return;
             }
         }
         
@@ -500,11 +495,7 @@ class Game {
             if (b.y <= hw) { b.vy *= -1; wallHit = true; }
             if (b.y > this.ctrlY) { this.balls.splice(i, 1); continue; }
 
-            if (wallHit) {
-                b.activePierce = 0;
-                b.activeExpDmg = 0;
-                b.activeExpRad = 0;
-            }
+            if (wallHit) { b.activePierce = 0; b.activeExpDmg = 0; b.activeExpRad = 0; }
         }
 
         if (this.laserActiveTime > 0) {
@@ -859,19 +850,21 @@ class Game {
         ctx.fillStyle = this.state === 'TITLE' ? '#111' : '#0b0f19'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (this.state === 'TITLE' || this.state === 'EQUIP') return;
 
+        // Danger Line
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'; ctx.beginPath(); ctx.moveTo(0, 80 + 19 * this.ROW_H); ctx.lineTo(canvas.width, 80 + 19 * this.ROW_H); ctx.stroke();
         
+        // Control Area
         ctx.fillStyle = '#12182b'; ctx.fillRect(0, this.ctrlY, canvas.width, canvas.height - this.ctrlY);
         ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; ctx.fillRect(0, this.ctrlY, canvas.width, 2);
         
-        // HUD
+        // ★ HUD表示
         ctx.fillStyle = 'rgba(15, 20, 35, 0.8)'; ctx.fillRect(0, 0, canvas.width, 50);
         ctx.fillStyle = '#00ffff'; ctx.font = '14px Helvetica-Bold'; ctx.textAlign = 'center';
         
         const modeText = this.autoMode ? "[AUTO]" : `LIFE:${this.lives}`;
-        ctx.fillText(`Lv.${this.totalLayers} | ${modeText} | PTS:${save.total_points} | BOMB:${this.bombCount}/${this.s.bombReq}`, canvas.width/2, 20);
+        ctx.fillText(`Lv.${this.totalLayers} | ${modeText} | PTS:${save.total_points}`, canvas.width/2, 20);
         ctx.fillStyle = '#bdc3c7'; ctx.font = '12px Helvetica-Bold';
-        ctx.fillText(`MANUAL MAX: Lv.${save.max_manual_layer}`, canvas.width/2, 40);
+        ctx.fillText(`MAX: Lv.${save.max_manual_layer} | BOMB: ${this.bombCount}/${this.s.bombReq}`, canvas.width/2, 40);
 
         const drawRect = (obj, isBlock=false) => {
             ctx.fillStyle = obj.color || 'white'; ctx.fillRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
@@ -945,7 +938,6 @@ const synthModal = document.getElementById('synth-modal');
 const btnAutoStop = document.getElementById('btn-auto-stop');
 let synthSelected = [];
 
-// タイトル画面のタッチ対応 (iOSの不具合解消用)
 const startTitle = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     Sound.play('coin'); showEquipMenu("");
@@ -1015,7 +1007,7 @@ function showEquipMenu(msg) {
                 let nameHtml = `<span class="inv-name">${itemData.name} [Lv.${itemLvl}]</span>`;
                 
                 if (!itemData.id.startsWith('synth_')) {
-                    const sellBtn = document.createElement('div'); // buttonのネストを避けるためdivを使用
+                    const sellBtn = document.createElement('div');
                     sellBtn.className = 'btn-sell';
                     sellBtn.innerText = '売却';
                     sellBtn.onclick = (e) => {
@@ -1068,6 +1060,7 @@ function showEquipMenu(msg) {
 });
 
 document.getElementById('btn-inv-close').addEventListener('click', () => { showEquipMenu(""); });
+
 document.getElementById('btn-start').addEventListener('click', () => { equipLayer.classList.add('hidden'); game.autoMode = false; btnAutoStop.classList.add('hidden'); game.initGame(); });
 document.getElementById('btn-auto-start').addEventListener('click', () => { equipLayer.classList.add('hidden'); game.autoMode = true; btnAutoStop.classList.remove('hidden'); game.initGame(); });
 btnAutoStop.addEventListener('click', () => { game.autoMode = false; btnAutoStop.classList.add('hidden'); Sound.play('coin'); });
