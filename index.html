@@ -3,39 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEGA BREAKOUT V13</title>
+    <title>MEGA BREAKOUT V13.1</title>
     <style>
-        /* 全体のリセットとベース設定 */
-        body { margin: 0; padding: 0; background: #0b0f19; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; touch-action: none; user-select: none; }
+        /* タップ干渉を完全に防ぐリセット設定 */
+        body { margin: 0; padding: 0; background: #0b0f19; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
         #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 800px; background: #12182b; box-shadow: 0 0 20px rgba(0,255,255,0.1); overflow: hidden; }
-        canvas { display: block; width: 100%; height: 100%; }
         
-        /* スクロールバー装飾 */
+        /* ゲーム画面はスワイプスクロールを完全無効化 */
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+        
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
         
-        /* モダンなガラス風UIレイヤー */
+        /* ガラス風を廃止し、タッチバグが起きないソリッドなUIレイヤーに変更 */
         .ui-layer { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             display: flex; flex-direction: column; align-items: center; 
-            background: rgba(15, 20, 35, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            background: rgba(15, 20, 35, 0.98);
             z-index: 10; color: white; touch-action: manipulation; 
         }
         .hidden { display: none !important; }
         
-        /* タイトル画面 */
         #title-layer { justify-content: center; background: radial-gradient(circle, #1a2540 0%, #0b0f19 100%); cursor: pointer; }
         h1 { font-size: 34px; margin-bottom: 20px; text-shadow: 0 0 15px cyan; text-align: center; font-weight: 900; letter-spacing: 2px; }
         .blink { font-size: 16px; animation: blinker 1.5s linear infinite; padding: 20px; color: #bdc3c7; }
         @keyframes blinker { 50% { opacity: 0.3; } }
         
-        /* 装備メニュー */
         #equip-layer { padding-top: 8%; box-sizing: border-box; overflow-y: auto; }
         h2 { font-size: 22px; margin: 5px 0; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
         #pt-label { color: #00ffff; font-size: 16px; margin: 5px 0 10px 0; font-weight: bold; }
         #gacha-msg { color: #f1c40f; font-size: 13px; min-height: 20px; margin-bottom: 5px; font-weight: bold; text-align: center; padding: 0 10px;}
         
-        /* リッチなボタンデザイン */
+        /* 確実にタップ判定を取るためのボタン化 */
+        button { font-family: inherit; outline: none; }
         .equip-btn { 
             background: linear-gradient(145deg, #2c3e50, #1a252f); color: white; 
             border: 1px solid rgba(255,255,255,0.1); width: 85%; padding: 12px; margin: 5px 0; 
@@ -50,10 +50,9 @@
         .btn-synth { flex: 1; background: linear-gradient(145deg, #9b59b6, #8e44ad); color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .btn-synth:active { transform: scale(0.96); }
         
-        #btn-start { background: linear-gradient(145deg, #2ecc71, #27ae60); color: white; margin-top: 20px; font-size: 16px; cursor: pointer; padding: 12px; font-weight: bold; border-radius: 12px; width: 85%; text-align: center; box-shadow: 0 4px 10px rgba(46,204,113,0.4); }
-        #btn-auto-start { background: rgba(0,0,0,0.3); color: #f39c12; margin-top: 12px; margin-bottom: 20px; font-size: 14px; cursor: pointer; padding: 10px; font-weight: bold; border: 1px solid #f39c12; border-radius: 12px; width: 85%; text-align: center; }
+        .btn-start { background: linear-gradient(145deg, #2ecc71, #27ae60); color: white; margin-top: 20px; font-size: 16px; cursor: pointer; padding: 12px; font-weight: bold; border: none; border-radius: 12px; width: 85%; text-align: center; box-shadow: 0 4px 10px rgba(46,204,113,0.4); display: block; }
+        .btn-auto-start { background: rgba(0,0,0,0.3); color: #f39c12; margin-top: 12px; margin-bottom: 20px; font-size: 14px; cursor: pointer; padding: 10px; font-weight: bold; border: 1px solid #f39c12; border-radius: 12px; width: 85%; text-align: center; display: block; }
         
-        /* 見切れないよう上部へ配置したオート停止ボタン */
         #btn-auto-stop { 
             position: absolute; top: 60px; left: 50%; transform: translateX(-50%); 
             background: linear-gradient(135deg, #ff4757, #e74c3c); color: white; 
@@ -63,17 +62,16 @@
         }
         #btn-auto-stop:active { transform: translateX(-50%) scale(0.95); }
         
-        /* モーダル画面 */
-        .modal { z-index: 30; padding-top: 8%; background: rgba(10, 15, 25, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
+        .modal { z-index: 30; padding-top: 8%; background: #0a0f1e; }
         .list-box { width: 90%; height: 70%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; margin-top: 10px; }
-        .inv-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; cursor: pointer; color: white; text-align: left; font-size: 14px; line-height: 1.4; position: relative; }
-        .inv-item:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
+        .inv-item { background: #1a2535; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; cursor: pointer; color: white; text-align: left; font-size: 14px; line-height: 1.4; position: relative; }
+        .inv-item:active { transform: scale(0.98); background: #2c3e50; }
         .inv-item.selected { border: 2px solid #f1c40f; background: rgba(241,196,15,0.1); }
         .inv-name { font-weight: bold; color: #ecf0f1; margin-bottom: 6px; display: inline-block; width: 75%; }
         .inv-eff { font-size: 12px; color: #bdc3c7; }
         .inv-eff.disabled { color: #7f8c8d; text-decoration: line-through; }
         .inv-eff.demerit { color: #ff6b81; }
-        .btn-sell { position: absolute; right: 10px; top: 10px; background: #e74c3c; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; font-weight: bold; }
+        .btn-sell { position: absolute; right: 10px; top: 10px; background: #e74c3c; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 11px; cursor: pointer; font-weight: bold; z-index: 5; }
     </style>
 </head>
 <body>
@@ -82,7 +80,7 @@
     <button id="btn-auto-stop" class="hidden">■ 自動操作を終了</button>
     
     <div id="title-layer" class="ui-layer">
-        <h1>MEGA BREAKOUT<br><span style="font-size:20px; color:#f1c40f;">V13</span></h1>
+        <h1>MEGA BREAKOUT<br><span style="font-size:20px; color:#f1c40f;">V13.1</span></h1>
         <div class="blink">画面をタップしてスタート</div>
     </div>
     
@@ -103,8 +101,8 @@
             <button id="btn-synth-menu" class="btn-synth">⚒️ 合成</button>
         </div>
         
-        <div id="btn-start">▶︎ 通常スタート</div>
-        <div id="btn-auto-start">🤖 自動モード (上限階層でループ)</div>
+        <button id="btn-start" class="btn-start">▶︎ 通常スタート</button>
+        <button id="btn-auto-start" class="btn-auto-start">🤖 自動モード (上限階層でループ)</button>
     </div>
 
     <div id="inventory-modal" class="ui-layer modal hidden">
@@ -217,7 +215,7 @@ const APPLY_EFFECTS = {
 class SaveData {
     constructor() { this.load(); }
     load() {
-        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v12')) || {}; } catch(e) {}
+        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v13')) || {}; } catch(e) {}
         this.loadout = data.loadout || {main: 'main_normal', sub: 'none', option: 'none', acc1: 'none', acc2: 'none'};
         this.total_points = data.total_points || 0;
         this.item_counts = data.item_counts || {'main_normal': 1};
@@ -225,7 +223,7 @@ class SaveData {
         this.synth_items = data.synth_items || {};
         this.max_manual_layer = data.max_manual_layer || 0;
     }
-    save() { try { localStorage.setItem('megabreakout_save_v12', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
+    save() { try { localStorage.setItem('megabreakout_save_v13', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
     getLevel(itemId) {
         if (itemId === 'none') return 0;
         const c = this.item_counts[itemId] || 0; if (c <= 0) return 0;
@@ -234,7 +232,6 @@ class SaveData {
 }
 const save = new SaveData();
 
-// ランダムドロップの生成（スタック対策済）
 function generateCustomDrop(layerCount, cat) {
     const id = 'drop_' + Date.now() + '_' + Math.floor(Math.random()*1000);
     
@@ -250,14 +247,14 @@ function generateCustomDrop(layerCount, cat) {
     
     for(let i=0; i<posCount; i++) {
         let ef = posPool[Math.floor(Math.random() * posPool.length)];
-        if (!ef) ef = 'acc_score_up'; // 安全策
+        if (!ef) ef = 'acc_score_up'; 
         let lvl = basePower + Math.floor(Math.random() * 2); 
         if (ef.includes('cnt') || ef.includes('life') || ef.includes('req')) lvl = Math.max(1, Math.floor(lvl / 3));
         effects.push({ type: ef, level: lvl });
     }
     
     let negEf = negPool[Math.floor(Math.random() * negPool.length)];
-    if (!negEf) negEf = 'acc_score_up'; // 安全策
+    if (!negEf) negEf = 'acc_score_up'; 
     let negLvl = -(basePower + Math.floor(Math.random() * 2));
     if (negEf.includes('cnt') || negEf.includes('life') || negEf.includes('req')) negLvl = -Math.max(1, Math.floor(Math.abs(negLvl) / 3));
     effects.push({ type: negEf, level: negLvl });
@@ -370,11 +367,9 @@ class Game {
             if (this.totalLayers > save.max_manual_layer) {
                 save.max_manual_layer = this.totalLayers;
                 save.save();
-                // 表示更新
                 document.getElementById('auto-max-label').innerText = `手動最高到達: ${save.max_manual_layer}層`;
             }
         } else {
-            // オート時は最高到達層でループ
             if (this.totalLayers >= save.max_manual_layer && save.max_manual_layer > 0) {
                 this.pendingRestart = true;
                 return;
@@ -398,7 +393,7 @@ class Game {
     }
 
     createBlock(x, y, w) {
-        const r = Math.random(); let bType = 'normal', color = '#2ecc71'; // 少し明るい緑に
+        const r = Math.random(); let bType = 'normal', color = '#2ecc71'; 
         
         if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#7f8c8d'; }
         else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = '#e74c3c'; } 
@@ -595,7 +590,6 @@ class Game {
         if (this.boss.y < this.boss.targetY) this.boss.y += 1;
         this.bossTimer += 0.03; this.boss.x = canvas.width / 2 + Math.sin(this.bossTimer * 2) * 100;
         
-        // ★ボスの攻撃頻度をマイルドに
         let atkRate = 0.005 + (this.stage * 0.002);
         if (Math.random() < atkRate) {
             const r = Math.random();
@@ -648,13 +642,10 @@ class Game {
             }
         });
 
-        // ★拾得処理の堅牢化 (スタック対策)
         for (let i = this.items.length - 1; i >= 0; i--) { 
             if (intersect(this.items[i], this.paddle)) { 
                 let itemToApply = this.items.splice(i, 1)[0];
-                try {
-                    this.applyItem(itemToApply); 
-                } catch(e) { console.error("Item Apply Error:", e); }
+                try { this.applyItem(itemToApply); } catch(e) { console.error("Item Apply Error", e); }
             } 
         }
         
@@ -713,7 +704,6 @@ class Game {
                 this.bombCount = 0; Sound.play('explosion');
                 this.blocks.forEach(b => { save.total_points += Math.floor(10 * this.s.scoreMult); this.blocksDestroyed++; });
                 this.blocks = []; 
-                // ★ 目に優しいエフェクト（透明度高め）
                 this.effects.push({ x: canvas.width/2, y: this.ctrlY, r: canvas.width*1.5, life: 0.5, color: 'rgba(255, 0, 255, 0.3)' });
                 this.addFloatingText(`BOMB EXECUTED!`, canvas.width/2, this.ctrlY - 50, '#ff00ff');
             } else { Sound.play('coin'); }
@@ -802,7 +792,7 @@ class Game {
     }
 
     triggerAOE(x, y, damage, radius) {
-        this.effects.push({ x, y, r: radius, life: 1.0, color: 'rgba(255, 165, 0, 0.6)' }); Sound.play('explosion'); // 目に優しいオレンジ
+        this.effects.push({ x, y, r: radius, life: 1.0, color: 'rgba(255, 165, 0, 0.6)' }); Sound.play('explosion'); 
         for (let i = this.blocks.length - 1; i >= 0; i--) {
             if (this.blocks[i].bType === 'hard') continue; 
             if (Math.hypot(this.blocks[i].x - x, this.blocks[i].y - y) <= radius) { 
@@ -869,14 +859,12 @@ class Game {
         ctx.fillStyle = this.state === 'TITLE' ? '#111' : '#0b0f19'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (this.state === 'TITLE' || this.state === 'EQUIP') return;
 
-        // Danger Line
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'; ctx.beginPath(); ctx.moveTo(0, 80 + 19 * this.ROW_H); ctx.lineTo(canvas.width, 80 + 19 * this.ROW_H); ctx.stroke();
         
-        // Control Area
         ctx.fillStyle = '#12182b'; ctx.fillRect(0, this.ctrlY, canvas.width, canvas.height - this.ctrlY);
         ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; ctx.fillRect(0, this.ctrlY, canvas.width, 2);
         
-        // ★ HUDの配置変更 (画面上部)
+        // HUD
         ctx.fillStyle = 'rgba(15, 20, 35, 0.8)'; ctx.fillRect(0, 0, canvas.width, 50);
         ctx.fillStyle = '#00ffff'; ctx.font = '14px Helvetica-Bold'; ctx.textAlign = 'center';
         
@@ -957,7 +945,13 @@ const synthModal = document.getElementById('synth-modal');
 const btnAutoStop = document.getElementById('btn-auto-stop');
 let synthSelected = [];
 
-titleLayer.addEventListener('click', () => { Sound.play('coin'); showEquipMenu(""); });
+// タイトル画面のタッチ対応 (iOSの不具合解消用)
+const startTitle = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    Sound.play('coin'); showEquipMenu("");
+};
+titleLayer.addEventListener('touchstart', startTitle, {passive: false});
+titleLayer.addEventListener('mousedown', startTitle);
 
 function updateAllEquipBtns() {
     ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
@@ -997,11 +991,11 @@ function showEquipMenu(msg) {
         listEl.innerHTML = '';
         
         const createInvItem = (itemId, itemData = null) => {
-            const div = document.createElement('div');
-            div.className = 'inv-item';
+            const btn = document.createElement('button');
+            btn.className = 'inv-item';
             
             if (itemData) {
-                div.style.borderLeft = itemData.cat === 'mix' ? '4px solid #9b59b6' : '4px solid #f1c40f';
+                btn.style.borderLeft = itemData.cat === 'mix' ? '4px solid #9b59b6' : '4px solid #f1c40f';
                 const itemLvl = itemData.level || 1;
                 
                 let effectStr = itemData.effects.map(ef => {
@@ -1021,7 +1015,7 @@ function showEquipMenu(msg) {
                 let nameHtml = `<span class="inv-name">${itemData.name} [Lv.${itemLvl}]</span>`;
                 
                 if (!itemData.id.startsWith('synth_')) {
-                    const sellBtn = document.createElement('button');
+                    const sellBtn = document.createElement('div'); // buttonのネストを避けるためdivを使用
                     sellBtn.className = 'btn-sell';
                     sellBtn.innerText = '売却';
                     sellBtn.onclick = (e) => {
@@ -1029,13 +1023,13 @@ function showEquipMenu(msg) {
                         delete save.custom_items[itemId];
                         if(save.loadout[slotKey] === itemId) save.loadout[slotKey] = 'none';
                         save.total_points += 500;
-                        save.save(); Sound.play('coin'); div.remove();
+                        save.save(); Sound.play('coin'); btn.remove();
                         document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
                     };
-                    div.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
-                    div.appendChild(sellBtn);
+                    btn.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
+                    btn.appendChild(sellBtn);
                 } else {
-                    div.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
+                    btn.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
                 }
             } else {
                 let name = ITEM_DEFS[itemId].name;
@@ -1043,16 +1037,16 @@ function showEquipMenu(msg) {
                     const lvl = save.getLevel(itemId);
                     name = `${name} [Lv.${lvl}]${lvl >= 20 ? ' MAX' : ''}`;
                 }
-                div.innerText = name;
+                btn.innerText = name;
             }
             
-            div.onclick = (e) => {
+            btn.onclick = (e) => {
                 if(e.target.className === 'btn-sell') return;
                 save.loadout[slotKey] = itemId;
                 save.save(); Sound.play('coin');
                 showEquipMenu("");
             };
-            return div;
+            return btn;
         };
         
         listEl.appendChild(createInvItem('none'));
@@ -1126,11 +1120,11 @@ function refreshSynthList() {
     }
 
     lv20Items.forEach(itemId => {
-        const div = document.createElement('div');
-        div.className = 'inv-item' + (synthSelected.includes(itemId) ? ' selected' : '');
-        div.innerText = `${ITEM_DEFS[itemId].name} [Lv.20 MAX]`;
+        const btn = document.createElement('button');
+        btn.className = 'inv-item' + (synthSelected.includes(itemId) ? ' selected' : '');
+        btn.innerText = `${ITEM_DEFS[itemId].name} [Lv.20 MAX]`;
         
-        div.onclick = () => {
+        btn.onclick = () => {
             if (synthSelected.includes(itemId)) {
                 synthSelected = synthSelected.filter(id => id !== itemId);
             } else {
@@ -1138,7 +1132,7 @@ function refreshSynthList() {
             }
             refreshSynthList();
         };
-        listEl.appendChild(div);
+        listEl.appendChild(btn);
     });
 
     if (synthSelected.length === 2) {
@@ -1170,7 +1164,6 @@ document.getElementById('btn-synth-exec').addEventListener('click', () => {
     
     Sound.play('powerup'); synthSelected = []; save.save(); refreshSynthList();
 });
-
 </script>
 </body>
 </html>
