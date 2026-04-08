@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MEGA BREAKOUT V15</title>
+    <title>MEGA BREAKOUT V16</title>
     <style>
         /* 見やすくクリーンなモダンデザイン */
         body { margin: 0; padding: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -54,6 +54,12 @@
         .inv-eff.demerit { color: #ef4444; }
         .btn-sell { position: absolute; right: 12px; top: 12px; background: #ef4444; color: white; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: bold; z-index: 5; }
         .btn-close { margin-top: 15px; background: #ef4444; color: white; width: 85%; padding: 14px; border-radius: 8px; font-weight: bold; }
+        
+        /* ステータス確認画面の装飾 */
+        .stat-group { background: #1e293b; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #38bdf8; }
+        .stat-title { font-size: 14px; font-weight: bold; color: #f8fafc; margin-bottom: 4px; border-bottom: 1px solid #334155; padding-bottom: 4px;}
+        .stat-detail { font-size: 12px; color: #cbd5e1; display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .stat-val { color: #f59e0b; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -64,7 +70,7 @@
     <div id="title-layer" class="ui-layer">
         <div class="menu-content">
             <h1>MEGA BREAKOUT</h1>
-            <div class="subtitle">VERSION 15</div>
+            <div class="subtitle">VERSION 16</div>
             <div class="blink">画面をタップしてスタート</div>
         </div>
     </div>
@@ -81,6 +87,8 @@
             <button id="btn-acc1" class="equip-btn"></button>
             <button id="btn-acc2" class="equip-btn"></button>
             
+            <button id="btn-stats-show" class="equip-btn" style="background: #0ea5e9; margin-top: 15px;">📊 現在のステータス詳細</button>
+            
             <div class="gacha-box">
                 <button id="btn-gacha-1" class="btn-gacha">ガチャ</button>
                 <button id="btn-gacha-all" class="btn-gacha">一括</button>
@@ -89,6 +97,14 @@
             
             <button id="btn-start" class="btn-start">▶︎ 通常スタート</button>
             <button id="btn-auto-start" class="btn-auto-start">🤖 自動モード (上限階層でループ)</button>
+        </div>
+    </div>
+
+    <div id="stats-modal" class="ui-layer hidden">
+        <div class="menu-content">
+            <h2>📊 ステータス詳細</h2>
+            <div id="stats-list" class="list-box" style="padding: 5px;"></div>
+            <button id="btn-stats-close" class="btn-close">戻る</button>
         </div>
     </div>
 
@@ -176,21 +192,25 @@ const APPLY_EFFECTS = {
     'main_pierce': (l, s) => { s.mainPierce += l; },
     'main_exp_rad': (l, s) => { s.hasExp = true; s.mainExplodeRad += l * 10; },
     'main_exp_dmg': (l, s) => { s.hasExp = true; s.mainExplodeDmg += l; },
+
     'sub_lsr_dmg': (l, s) => { s.lsrDmg += l; },
     'sub_lsr_spd': (l, s) => { s.lsrInterval = Math.max(4, 40 - l * 2); },
     'sub_lsr_prc': (l, s) => { s.lsrPierce += l; },
     'sub_lsr_thk': (l, s) => { s.lsrWidth += l * 3; },
+
     'sub_msl_dmg': (l, s) => { s.hasMsl = true; s.mslDmg += l * 2; },
     'sub_msl_spd': (l, s) => { s.hasMsl = true; s.mslSpd += l * 0.2; },
     'sub_msl_rad': (l, s) => { s.hasMsl = true; s.mslRad += l * 15; },
     'sub_msl_cnt': (l, s) => { s.hasMsl = true; s.mslCnt += l; },
     'sub_bomb_req': (l, s) => { s.bombReq -= l; },
+
     'opt_rot_cnt': (l, s) => { s.rotCnt += l; },
     'opt_rot_size': (l, s) => { s.rotSize += l * 2; },
     'opt_rot_spd': (l, s) => { s.rotSpd += l * 0.01; },
     'opt_pill_size': (l, s) => { s.pillSize += l * 4; },
     'opt_pill_cnt': (l, s) => { s.pillCnt += l; },
     'opt_pill_hp': (l, s) => { s.pillHp += l * 2; },
+
     'acc_ball_cnt': (l, s) => { s.accBalls += l; },
     'acc_sat_hp': (l, s) => { s.satHp += l * 2; },
     'acc_sat_spd': (l, s) => { s.satSpd += l * 1.5; },
@@ -219,6 +239,53 @@ class SaveData {
 }
 const save = new SaveData();
 
+// UI表示用のステータス計算関数
+function calcCurrentStats() {
+    let s = {
+        mainDmg: 1, mainPierce: 0, hasExp: false, mainExplodeRad: 40, mainExplodeDmg: 1, mainSpeed: 4,
+        lsrInterval: 40, lsrPierce: 0, lsrWidth: 4, lsrDmg: 1,
+        hasMsl: false, mslCnt: 1, mslSpd: 1.0, mslRad: 50, mslDmg: 1,
+        satCnt: 0, satHp: 1, satSpd: 2, accBalls: 0,
+        bombReq: 20, rotCnt: 0, rotSize: 8, rotSpd: 0.05, pillCnt: 0, pillSize: 30, pillHp: 1,
+        scoreMult: 1, maxLife: 3
+    };
+    ['main', 'sub', 'option', 'acc1', 'acc2'].forEach(slot => {
+        const itemId = save.loadout[slot];
+        if (itemId === 'none') return;
+        let slotCat = slot.replace(/\d/, ''); if (slotCat === 'option') slotCat = 'opt';
+
+        if (save.custom_items[itemId] || save.synth_items[itemId]) {
+            const itemData = save.custom_items[itemId] || save.synth_items[itemId];
+            const itemLvl = itemData.level || 1;
+            itemData.effects.forEach(ef => {
+                const def = ITEM_DEFS[ef.type];
+                if (!def) return;
+                const actualLevel = ef.level * itemLvl;
+                if (actualLevel > 0) {
+                    if (slotCat === 'opt' || slotCat === 'acc' || def.cat === slotCat || itemData.cat === 'mix') {
+                        APPLY_EFFECTS[ef.type](actualLevel, s);
+                    }
+                } else {
+                    APPLY_EFFECTS[ef.type](actualLevel, s);
+                }
+            });
+        } else {
+            const lvl = save.getLevel(itemId);
+            if (APPLY_EFFECTS[itemId]) APPLY_EFFECTS[itemId](lvl, s);
+        }
+    });
+
+    if (s.maxLife < 1) s.maxLife = 1;
+    if (s.mslSpd < 0.1) s.mslSpd = 0.1;
+    if (s.rotCnt < 0) s.rotCnt = 0;
+    if (s.satCnt < 0) s.satCnt = 0;
+    if (s.pillCnt < 0) s.pillCnt = 0;
+    if (s.bombReq < 5) s.bombReq = 5;
+    if (s.lsrWidth < 2) s.lsrWidth = 2;
+    if (s.accBalls < 0) s.accBalls = 0;
+    return s;
+}
+
 function generateCustomDrop(layerCount, cat) {
     const id = 'drop_' + Date.now() + '_' + Math.floor(Math.random()*1000);
     let posPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none' && ITEM_DEFS[k].cat === cat);
@@ -231,13 +298,15 @@ function generateCustomDrop(layerCount, cat) {
     let basePower = Math.max(1, Math.floor(layerCount / 100));
     
     for(let i=0; i<posCount; i++) {
-        let ef = posPool[Math.floor(Math.random() * posPool.length)] || 'acc_score_up';
+        let ef = posPool[Math.floor(Math.random() * posPool.length)];
+        if (!ef) ef = 'acc_score_up'; 
         let lvl = basePower + Math.floor(Math.random() * 2); 
         if (ef.includes('cnt') || ef.includes('life') || ef.includes('req')) lvl = Math.max(1, Math.floor(lvl / 3));
         effects.push({ type: ef, level: lvl });
     }
     
-    let negEf = negPool[Math.floor(Math.random() * negPool.length)] || 'acc_score_up';
+    let negEf = negPool[Math.floor(Math.random() * negPool.length)];
+    if (!negEf) negEf = 'acc_score_up'; 
     let negLvl = -(basePower + Math.floor(Math.random() * 2));
     if (negEf.includes('cnt') || negEf.includes('life') || negEf.includes('req')) negLvl = -Math.max(1, Math.floor(Math.abs(negLvl) / 3));
     effects.push({ type: negEf, level: negLvl });
@@ -252,12 +321,6 @@ function generateCustomDrop(layerCount, cat) {
 // ==========================================
 // 3. ゲームエンジン
 // ==========================================
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-function resize() { canvas.width = document.getElementById('game-wrapper').clientWidth; canvas.height = document.getElementById('game-wrapper').clientHeight; }
-window.addEventListener('resize', resize); resize();
-function intersect(a, b) { return Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2; }
-
 class Game {
     constructor() {
         this.state = 'TITLE'; this.ctrlY = canvas.height - 150;
@@ -267,52 +330,7 @@ class Game {
     }
 
     buildStats() {
-        this.s = {
-            mainDmg: 1, mainPierce: 0, hasExp: false, mainExplodeRad: 40, mainExplodeDmg: 1, mainSpeed: 4,
-            lsrInterval: 40, lsrPierce: 0, lsrWidth: 4, lsrDmg: 1,
-            hasMsl: false, mslCnt: 1, mslSpd: 1.0, mslRad: 50, mslDmg: 1,
-            satCnt: 0, satHp: 1, satSpd: 2, accBalls: 0,
-            bombReq: 20, rotCnt: 0, rotSize: 8, rotSpd: 0.05, pillCnt: 0, pillSize: 30, pillHp: 1,
-            scoreMult: 1, maxLife: 3
-        };
-        
-        ['main', 'sub', 'option', 'acc1', 'acc2'].forEach(slot => {
-            const itemId = save.loadout[slot];
-            if (itemId === 'none') return;
-            
-            let slotCat = slot.replace(/\d/, '');
-            if (slotCat === 'option') slotCat = 'opt';
-
-            if (save.custom_items[itemId] || save.synth_items[itemId]) {
-                const itemData = save.custom_items[itemId] || save.synth_items[itemId];
-                const itemLvl = itemData.level || 1;
-                itemData.effects.forEach(ef => {
-                    const def = ITEM_DEFS[ef.type];
-                    if (!def) return;
-                    const actualLevel = ef.level * itemLvl;
-                    if (actualLevel > 0) {
-                        if (slotCat === 'opt' || slotCat === 'acc' || def.cat === slotCat || itemData.cat === 'mix') {
-                            APPLY_EFFECTS[ef.type](actualLevel, this.s);
-                        }
-                    } else {
-                        APPLY_EFFECTS[ef.type](actualLevel, this.s);
-                    }
-                });
-            } else {
-                const lvl = save.getLevel(itemId);
-                if (APPLY_EFFECTS[itemId]) APPLY_EFFECTS[itemId](lvl, this.s);
-            }
-        });
-
-        if (this.s.maxLife < 1) this.s.maxLife = 1;
-        if (this.s.mslSpd < 0.1) this.s.mslSpd = 0.1;
-        if (this.s.rotCnt < 0) this.s.rotCnt = 0;
-        if (this.s.satCnt < 0) this.s.satCnt = 0;
-        if (this.s.pillCnt < 0) this.s.pillCnt = 0;
-        if (this.s.bombReq < 5) this.s.bombReq = 5;
-        if (this.s.lsrWidth < 2) this.s.lsrWidth = 2;
-        if (this.s.accBalls < 0) this.s.accBalls = 0;
-        
+        this.s = calcCurrentStats();
         this.topMargin = 90;
         this.ROW_H = (this.ctrlY - this.topMargin) / 20; 
     }
@@ -334,7 +352,6 @@ class Game {
         this.lives = this.s.maxLife;
 
         this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
-        
         for (let i = 0; i < 5; i++) this.spawnRow(this.topMargin + (i * this.ROW_H));
         
         const initialBalls = 1 + this.s.accBalls;
@@ -374,11 +391,13 @@ class Game {
     }
 
     createBlock(x, y, w) {
-        const r = Math.random(); let bType = 'normal', color = '#38bdf8'; 
+        const r = Math.random(); 
+        // ★ 色変更：通常(緑系)・ボール(青系+テキスト)
+        let bType = 'normal', color = '#10b981'; 
         
         if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#475569'; }
         else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = '#ef4444'; } 
-        else if (r < 0.22) { bType = 'blue'; color = '#0ea5e9'; } 
+        else if (r < 0.22) { bType = 'blue'; color = '#3b82f6'; } // 青ブロック
         else if (r < 0.28) { bType = 'laser_item'; color = '#facc15'; } 
         else if (r < 0.30) { bType = 'giant_item'; color = '#a855f7'; } 
         else if (r < 0.35 && this.totalLayers >= 5) { bType = 'bomb'; color = '#334155'; } 
@@ -389,7 +408,7 @@ class Game {
             if (Math.random() < hpRate) {
                 const maxHp = 1 + Math.floor(this.totalLayers / 5);
                 hp = Math.floor(Math.random() * maxHp) + 1;
-                if (hp > 1) color = '#94a3b8'; 
+                if (hp > 1) color = '#14b8a6'; 
             }
         }
         
@@ -422,7 +441,7 @@ class Game {
 
     spawnItem(x, y, bType) {
         let c = 'white', w = 20;
-        if (bType === 'blue') c = '#0ea5e9'; 
+        if (bType === 'blue') c = '#3b82f6'; 
         else if (bType === 'laser_item') c = '#facc15';
         else if (bType === 'giant_item') { c = '#a855f7'; bType = 'large_ball'; }
         else if (bType === 'boss_drop') { c = '#f59e0b'; w = 25; } 
@@ -440,7 +459,6 @@ class Game {
 
         this.handleAutoMode(); 
         
-        // --- リファクタリング: 移動処理を分割 ---
         this.subTimer++;
         this.moveBalls();
         this.movePlayerWeapons();
@@ -502,12 +520,21 @@ class Game {
         if (this.s.hasMsl && this.subTimer % 120 === 0) {
             for(let i=0; i<this.s.mslCnt; i++) {
                 let dx = (i - (this.s.mslCnt-1)/2) * 30;
-                this.missiles.push({ x: this.paddle.x + dx, y: this.paddle.y - 20, w: 12, h: 20, vy: -this.s.mslSpd, damage: this.s.mslDmg, radius: this.s.mslRad, color: '#f59e0b' });
+                // ★ミサイルの色をオレンジに変更
+                this.missiles.push({ x: this.paddle.x + dx, y: this.paddle.y - 20, w: 8, h: 18, vy: -this.s.mslSpd, damage: this.s.mslDmg, radius: this.s.mslRad, color: '#f97316' });
             }
         }
         
         for (let i = this.lasers.length - 1; i >= 0; i--) { let l = this.lasers[i]; l.y += l.vy; if (l.y < -50) this.lasers.splice(i, 1); }
-        for (let i = this.missiles.length - 1; i >= 0; i--) { let m = this.missiles[i]; m.y += m.vy; if (m.y < -50) this.missiles.splice(i, 1); }
+        
+        for (let i = this.missiles.length - 1; i >= 0; i--) { 
+            let m = this.missiles[i]; m.y += m.vy; 
+            let hit = false;
+            for (let b of this.blocks) { if (intersect(m, b)) { hit = true; break; } }
+            if (!hit && this.boss && intersect(m, this.boss)) hit = true;
+            if (hit) { this.triggerAOE(m.x, m.y, m.damage, m.radius); this.missiles.splice(i, 1); }
+            else if (m.y < -50) this.missiles.splice(i, 1);
+        }
     }
 
     moveEnemiesAndItems() {
@@ -592,7 +619,6 @@ class Game {
         else if (type === 'falling_block') { this.fallingBlocks.push({ x, y, w: 30, h: 30, color: '#1e293b', vx: 0, vy: 2.5, hp: 3 + this.stage }); }
     }
 
-    // --- リファクタリング: 衝突判定を分割 ---
     handleCollisions() {
         this.collideBallsWithPaddleAndSats();
         this.collideItemsWithPaddle();
@@ -619,7 +645,6 @@ class Game {
                 ball.activeExpDmg = this.s.hasExp ? this.s.mainExplodeDmg : 0;
                 ball.activeExpRad = this.s.hasExp ? this.s.mainExplodeRad : 0;
             }
-            // 巨大ボールが敵弾を消す
             if (ball.isLarge) { 
                 for (let i = this.enemyBullets.length - 1; i >= 0; i--) { 
                     if (intersect(ball, this.enemyBullets[i])) { Sound.play('coin'); this.enemyBullets.splice(i, 1); } 
@@ -643,7 +668,6 @@ class Game {
             return false;
         };
 
-        // 敵弾
         for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
             let b = this.enemyBullets[i], hit = false;
             hit = checkHitObj(this.staticBarriers, b, (st, idx) => { Sound.play('coin'); st.hp--; if(st.hp<=0) this.staticBarriers.splice(idx,1); });
@@ -656,14 +680,12 @@ class Game {
             if (this.pendingRestart) return;
         }
 
-        // 落下ブロック
         for (let i = this.fallingBlocks.length - 1; i >= 0; i--) {
             let fb = this.fallingBlocks[i];
             if (intersect(fb, this.paddle)) { this.loseLife(); this.fallingBlocks.splice(i, 1); }
             if (this.pendingRestart) return;
         }
 
-        // 回転バリア
         for (let i = this.barrierNodes.length - 1; i >= 0; i--) {
             let hit = false;
             for (let j = this.enemyBullets.length - 1; j >= 0; j--) {
@@ -682,8 +704,6 @@ class Game {
             if (hitSomething) return;
             for (let i = this.fallingBlocks.length - 1; i >= 0; i--) { if (intersect(p, this.fallingBlocks[i])) { this.hitFallingBlock(p, i); break; } }
         });
-        
-        // ミサイルは moveObjects() 側で判定と爆発を行っているため除外
     }
 
     applyItem(item) {
@@ -797,7 +817,7 @@ class Game {
 
         if (this.boss.hp <= 0) {
             save.total_points += Math.floor(500 * this.s.scoreMult);
-            let dropRate = 0.30;
+            let dropRate = this.autoMode ? 0.005 : 0.30;
             const r = Math.random(); if (r < dropRate) this.spawnItem(this.boss.x, this.boss.y, 'boss_drop'); else if (r < dropRate + 0.4) this.spawnItem(this.boss.x, this.boss.y, 'large_ball');
             this.boss = null; this.state = 'PLAYING'; Sound.play('explosion');
             this.stage++;
@@ -864,8 +884,9 @@ class Game {
 
         this.blocks.forEach(b => {
             drawRect(b, true);
-            // HPテキスト描画
-            if (b.hp > 1 && b.bType !== 'bomb') { ctx.fillStyle = (b.bType==='hard')?'#fff':'#111'; ctx.font = '12px Helvetica-Bold'; ctx.fillText(b.hp, b.x, b.y + 4); }
+            // ★ ブロックの文字描画 (+1など)
+            if (b.bType === 'blue') { ctx.fillStyle = '#fff'; ctx.font = '12px Helvetica-Bold'; ctx.fillText('+1', b.x, b.y + 4); }
+            else if (b.hp > 1 && b.bType !== 'bomb') { ctx.fillStyle = (b.bType==='hard')?'#fff':'#111'; ctx.font = '12px Helvetica-Bold'; ctx.fillText(b.hp, b.x, b.y + 4); }
             else if (b.bType === 'bomb') { ctx.fillStyle = '#fff'; ctx.font = '12px Helvetica-Bold'; ctx.fillText('✖', b.x, b.y + 4); }
         });
         
@@ -877,12 +898,19 @@ class Game {
         this.items.forEach(i => { 
             drawRect(i); 
             if(i.bType==='bomb_item') { ctx.fillStyle='white'; ctx.font='14px Helvetica-Bold'; ctx.fillText('B', i.x, i.y+5); }
-            if(i.bType==='laser_item') { ctx.fillStyle='black'; ctx.font='14px Helvetica-Bold'; ctx.fillText('L', i.x, i.y+5); }
+            else if(i.bType==='laser_item') { ctx.fillStyle='black'; ctx.font='14px Helvetica-Bold'; ctx.fillText('L', i.x, i.y+5); }
+            else if(i.bType==='blue') { ctx.fillStyle='white'; ctx.font='12px Helvetica-Bold'; ctx.fillText('+1', i.x, i.y+4); }
         });
         
         this.enemyBullets.forEach(b => drawRect(b)); 
         this.lasers.forEach(l => drawRect(l)); 
-        this.missiles.forEach(m => drawRect(m));
+        
+        // ★ ミサイル描画 (オレンジ色 + ▲)
+        this.missiles.forEach(m => { 
+            ctx.fillStyle = m.color; 
+            ctx.fillRect(m.x - m.w/2, m.y - m.h/2, m.w, m.h);
+            ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText('▲', m.x, m.y + 4);
+        });
         
         this.balls.forEach(b => { 
             if (b.activePierce > 0 || b.activeExpDmg > 0) {
@@ -903,7 +931,7 @@ class Game {
 
         if (this.boss) { 
             drawRect(this.boss); 
-            // ★ボスのHP表示バグ修正（上に綺麗に重ねる）
+            // ボスHP表示の修正
             ctx.fillStyle = '#fff'; ctx.font = '16px Helvetica-Bold'; 
             ctx.fillText(`HP: ${Math.max(0, this.boss.hp)}`, this.boss.x, this.boss.y + 6); 
         }
@@ -941,6 +969,7 @@ const titleLayer = document.getElementById('title-layer');
 const equipLayer = document.getElementById('equip-layer');
 const invModal = document.getElementById('inventory-modal');
 const synthModal = document.getElementById('synth-modal');
+const statsModal = document.getElementById('stats-modal'); // ★ ステータス画面用
 const btnAutoStop = document.getElementById('btn-auto-stop');
 let synthSelected = [];
 
@@ -972,12 +1001,67 @@ function updateAllEquipBtns() {
 }
 
 function showEquipMenu(msg) {
-    game.state = 'EQUIP'; titleLayer.classList.add('hidden'); equipLayer.classList.remove('hidden'); invModal.classList.add('hidden'); synthModal.classList.add('hidden');
+    game.state = 'EQUIP'; 
+    titleLayer.classList.add('hidden'); equipLayer.classList.remove('hidden'); 
+    invModal.classList.add('hidden'); synthModal.classList.add('hidden'); statsModal.classList.add('hidden');
+    
     document.getElementById('equip-title').innerText = msg ? msg : '装備変更 & 再挑戦';
     document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
     document.getElementById('auto-max-label').innerText = `手動最高到達: ${save.max_manual_layer}層`;
     updateAllEquipBtns();
 }
+
+// ★ ステータス画面表示ロジック
+document.getElementById('btn-stats-show').addEventListener('click', () => {
+    const s = calcCurrentStats();
+    const listEl = document.getElementById('stats-list');
+    listEl.innerHTML = '';
+
+    const addStat = (title, vals) => {
+        let html = `<div class="stat-group"><div class="stat-title">${title}</div>`;
+        vals.forEach(v => { html += `<div class="stat-detail"><span>${v.label}</span><span class="stat-val">${v.val}</span></div>`; });
+        html += `</div>`;
+        listEl.innerHTML += html;
+    };
+
+    addStat('基本・パドル', [
+        {label: '最大ライフ', val: s.maxLife},
+        {label: 'スコア倍率', val: `x${s.scoreMult.toFixed(1)}`},
+        {label: '初期追加ボール', val: `+${s.accBalls}`}
+    ]);
+    addStat('メイン (ボール)', [
+        {label: '基本威力', val: s.mainDmg},
+        {label: '基本速度', val: s.mainSpeed.toFixed(1)},
+        {label: 'チャージ貫通', val: s.mainPierce},
+        {label: 'チャージ爆発', val: s.hasExp ? `威力 ${s.mainExplodeDmg} / 範囲 ${s.mainExplodeRad}` : '無効'}
+    ]);
+    addStat('サブ (レーザー)', [
+        {label: '発射間隔', val: `${s.lsrInterval}F`},
+        {label: '威力 / 太さ', val: `${s.lsrDmg} / ${s.lsrWidth}`},
+        {label: '貫通力', val: s.lsrPierce}
+    ]);
+    addStat('サブ (ミサイル)', [
+        {label: '状態', val: s.hasMsl ? '有効' : '無効'},
+        {label: '同時発射数', val: s.mslCnt},
+        {label: '威力 / 範囲', val: `${s.mslDmg} / ${s.mslRad}`},
+        {label: '飛行速度', val: s.mslSpd.toFixed(1)}
+    ]);
+    addStat('オプション (防衛陣地)', [
+        {label: '回転バリア', val: s.rotCnt > 0 ? `${s.rotCnt}枚 (ｻｲｽﾞ${s.rotSize})` : '0枚'},
+        {label: '固定トーチカ', val: s.pillCnt > 0 ? `${s.pillCnt}基 (強度${s.pillHp})` : '0基'}
+    ]);
+    addStat('アクセサリー (子機)', [
+        {label: '状態', val: s.satCnt > 0 ? '有効' : '無効'},
+        {label: '展開数', val: s.satCnt},
+        {label: '体力', val: s.satHp},
+        {label: '移動速度', val: s.satSpd.toFixed(1)}
+    ]);
+
+    equipLayer.classList.add('hidden');
+    statsModal.classList.remove('hidden');
+});
+
+document.getElementById('btn-stats-close').addEventListener('click', () => { showEquipMenu(""); });
 
 ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
     document.getElementById(`btn-${slotKey}`).addEventListener('click', () => {
@@ -1111,7 +1195,7 @@ function refreshSynthList() {
     let lv20Items = GACHA_POOL.filter(k => save.getLevel(k) === 20);
     
     if (lv20Items.length < 2) {
-        listEl.innerHTML = '<p style="color:#94a3b8; text-align:center; font-size:12px;">Lv.20のガチャ装備が2つ以上必要です</p>';
+        listEl.innerHTML = '<p class="sub-text" style="text-align:center;">Lv.20のガチャ装備が2つ以上必要です</p>';
         execBtn.innerText = "合成不可";
         return;
     }
