@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEGA BREAKOUT V11</title>
+    <title>MEGA BREAKOUT V12</title>
     <style>
         body { margin: 0; padding: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; touch-action: none; user-select: none; }
         #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 800px; background: #1a1a2e; box-shadow: 0 0 10px rgba(0,0,0,0.5); overflow: hidden; }
@@ -12,7 +12,7 @@
         .hidden { display: none !important; }
         
         #title-layer { justify-content: center; background: midnightblue; cursor: pointer; }
-        h1 { font-size: 32px; margin-bottom: 20px; text-shadow: 2px 2px 4px #000; text-align: center; }
+        h1 { font-size: 30px; margin-bottom: 20px; text-shadow: 2px 2px 4px #000; text-align: center; }
         .blink { font-size: 18px; animation: blinker 1.5s linear infinite; padding: 20px; }
         @keyframes blinker { 50% { opacity: 0.3; } }
         
@@ -22,28 +22,35 @@
         #gacha-msg { color: #f1c40f; font-size: 14px; min-height: 20px; margin-bottom: 5px; font-weight: bold; text-align: center; padding: 0 10px;}
         .equip-btn { background: #2c3e50; color: white; border: none; width: 85%; padding: 10px; margin: 4px 0; font-size: 14px; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .equip-btn:active { transform: scale(0.98); }
-        .gacha-box { display: flex; gap: 5%; width: 85%; margin-top: 5px; }
-        .btn-gacha { flex: 1; background: #e67e22; color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .gacha-box { display: flex; gap: 3%; width: 85%; margin-top: 5px; }
+        .btn-gacha { flex: 1; background: #e67e22; color: white; border: none; padding: 8px; font-size: 13px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .btn-synth { flex: 1; background: #9b59b6; color: white; border: none; padding: 8px; font-size: 13px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        
         #btn-start { background: #4cd964; color: white; margin-top: 15px; font-size: 16px; cursor: pointer; padding: 10px; font-weight: bold; border-radius: 8px; width: 85%; text-align: center; }
         #btn-auto-start { background: transparent; color: #f39c12; margin-top: 10px; margin-bottom: 20px; font-size: 14px; cursor: pointer; padding: 8px; font-weight: bold; border: 2px solid #f39c12; border-radius: 8px; width: 85%; text-align: center; }
-        #btn-auto-stop { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background-color: #e74c3c; color: white; border: 2px solid white; padding: 10px 20px; font-size: 14px; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 20; }
         
-        #inventory-modal { z-index: 30; background: rgba(10, 15, 30, 0.98); padding-top: 10%; }
-        #inv-list { width: 90%; height: 75%; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
-        .inv-item { background: #34495e; padding: 12px; border-radius: 6px; cursor: pointer; color: white; text-align: left; font-size: 14px; line-height: 1.4; }
+        /* オート停止ボタンを上部に移動 */
+        #btn-auto-stop { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background-color: #e74c3c; color: white; border: 2px solid white; padding: 10px 20px; font-size: 14px; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 20; }
+        
+        /* モーダル群 */
+        .modal { z-index: 30; background: rgba(10, 15, 30, 0.98); padding-top: 10%; }
+        .list-box { width: 90%; height: 70%; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
+        .inv-item { background: #34495e; padding: 12px; border-radius: 6px; cursor: pointer; color: white; text-align: left; font-size: 14px; line-height: 1.4; position: relative; }
         .inv-item:active { transform: scale(0.98); background: #2c3e50; }
-        .inv-name { font-weight: bold; color: #ecf0f1; margin-bottom: 4px; display: block; }
+        .inv-item.selected { border: 2px solid #f1c40f; background: #2c3e50; }
+        .inv-name { font-weight: bold; color: #ecf0f1; margin-bottom: 4px; display: inline-block; width: 75%; }
         .inv-eff { font-size: 12px; color: #bdc3c7; }
-        .inv-eff.demerit { color: #e74c3c; }
         .inv-eff.disabled { color: #7f8c8d; text-decoration: line-through; }
+        .inv-eff.demerit { color: #e74c3c; }
+        .btn-sell { position: absolute; right: 10px; top: 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
     </style>
 </head>
 <body>
 <div id="game-wrapper">
     <canvas id="gameCanvas"></canvas>
-    <button id="btn-auto-stop" class="hidden">■ 自動操作モードを終了</button>
+    <button id="btn-auto-stop" class="hidden">■ 自動操作を終了</button>
     <div id="title-layer" class="ui-layer">
-        <h1>MEGA BREAKOUT V11</h1>
+        <h1>MEGA BREAKOUT V12</h1>
         <div class="blink">画面をタップしてスタート</div>
     </div>
     
@@ -58,18 +65,27 @@
         <button id="btn-acc2" class="equip-btn"></button>
         
         <div class="gacha-box">
-            <button id="btn-gacha-1" class="btn-gacha">🎁 ガチャ<br>(300pt)</button>
-            <button id="btn-gacha-all" class="btn-gacha">🎁 一括ガチャ<br>(Pt全消費)</button>
+            <button id="btn-gacha-1" class="btn-gacha">🎁 ガチャ</button>
+            <button id="btn-gacha-all" class="btn-gacha">🎁 一括</button>
+            <button id="btn-synth-menu" class="btn-synth">⚒️ 合成</button>
         </div>
         
         <div id="btn-start">▶︎ 通常スタート</div>
-        <div id="btn-auto-start">🤖 自動モード (放置・Pt1/5・ドロップ0.5%)</div>
+        <div id="btn-auto-start" class="blink">🤖 自動モード (上限階層ループ)</div>
     </div>
 
-    <div id="inventory-modal" class="ui-layer hidden">
+    <div id="inventory-modal" class="ui-layer modal hidden">
         <h2 id="inv-title">装備を選択</h2>
-        <div id="inv-list"></div>
+        <div id="inv-list" class="list-box"></div>
         <button id="btn-inv-close" class="equip-btn" style="margin-top: 10px; background: #e74c3c;">戻る</button>
+    </div>
+
+    <div id="synth-modal" class="ui-layer modal hidden">
+        <h2>装備合成 (Lv.20同士)</h2>
+        <p style="font-size:12px; color:#bdc3c7;">LvMAXのガチャ装備を2つ選択してください</p>
+        <div id="synth-list" class="list-box"></div>
+        <button id="btn-synth-exec" class="equip-btn" style="background: #9b59b6;">合成実行 (2つ選択してください)</button>
+        <button id="btn-synth-close" class="equip-btn" style="margin-top: 5px; background: #e74c3c;">戻る</button>
     </div>
 </div>
 
@@ -87,7 +103,7 @@ const Sound = {
             osc.connect(gainNode); gainNode.connect(audioCtx.destination);
             const now = audioCtx.currentTime;
             if (type === 'hit') { osc.type = 'square'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(100, now+0.1); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now+0.1); osc.start(now); osc.stop(now+0.1); }
-            else if (type === 'explosion') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now+0.3); gainNode.gain.setValueAtTime(0.2, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now+0.3); osc.start(now); osc.stop(now+0.3); }
+            else if (type === 'explosion') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(10, now+0.2); gainNode.gain.setValueAtTime(0.15, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now+0.2); osc.start(now); osc.stop(now+0.2); }
             else if (type === 'powerup') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(1200, now+0.2); gainNode.gain.setValueAtTime(0.1, now); gainNode.gain.linearRampToValueAtTime(0.01, now+0.2); osc.start(now); osc.stop(now+0.2); }
             else if (type === 'laser') { osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(200, now+0.1); gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now+0.1); osc.start(now); osc.stop(now+0.1); }
         } catch(e) {}
@@ -99,14 +115,12 @@ const Sound = {
 // ==========================================
 const ITEM_DEFS = {
     'none': {cat: 'none', name: '【空き】', short: 'なし'},
-    // MAIN
     'main_normal': {cat: 'main', name: 'ﾉｰﾏﾙﾎﾞｰﾙ', short: 'ﾎﾞｰﾙ威力'},
     'main_rapid': {cat: 'main', name: 'ﾗﾋﾟｯﾄﾞﾎﾞｰﾙ', short: 'ﾎﾞｰﾙ速度'},
     'main_pierce': {cat: 'main', name: '貫通ﾎﾞｰﾙ[RARE]', short: 'ﾎﾞｰﾙ貫通'},
     'main_exp_rad': {cat: 'main', name: '爆発ﾎﾞｰﾙ(広域)', short: 'ﾎﾞｰﾙ爆発範囲'},
     'main_exp_dmg': {cat: 'main', name: '爆発ﾎﾞｰﾙ(威力)', short: 'ﾎﾞｰﾙ爆発威力'},
     
-    // SUB 
     'sub_lsr_dmg': {cat: 'sub', name: 'ﾚｰｻﾞｰ(威力)', short: 'ﾚｰｻﾞｰ威力'},
     'sub_lsr_spd': {cat: 'sub', name: 'ﾚｰｻﾞｰ(速射)', short: 'ﾚｰｻﾞｰ速射'},
     'sub_lsr_prc': {cat: 'sub', name: 'ﾚｰｻﾞｰ(貫通)[RARE]', short: 'ﾚｰｻﾞｰ貫通'},
@@ -117,8 +131,6 @@ const ITEM_DEFS = {
     'sub_msl_cnt': {cat: 'sub', name: 'ﾐｻｲﾙ(弾数)', short: 'ﾐｻｲﾙ弾数'},
     'sub_bomb_req': {cat: 'sub', name: 'ﾎﾞﾑ(ｺｽﾄ減)', short: 'ﾎﾞﾑｺｽﾄ削減'},
     
-    // OPT
-    'opt_sat_cnt': {cat: 'opt', name: '子機追加[RARE]', short: '子機数'},
     'opt_rot_cnt': {cat: 'opt', name: '回転ﾊﾞﾘｱ(枚数)', short: '回転ﾊﾞﾘｱ枚数'},
     'opt_rot_size': {cat: 'opt', name: '回転ﾊﾞﾘｱ(ｻｲｽﾞ)', short: '回転ﾊﾞﾘｱｻｲｽﾞ'},
     'opt_rot_spd': {cat: 'opt', name: '回転ﾊﾞﾘｱ(速度)', short: '回転ﾊﾞﾘｱ速度'},
@@ -126,10 +138,10 @@ const ITEM_DEFS = {
     'opt_pill_cnt': {cat: 'opt', name: 'ﾄｰﾁｶ(設置数)', short: 'ﾄｰﾁｶ数'},
     'opt_pill_hp': {cat: 'opt', name: 'ﾄｰﾁｶ(強度)', short: 'ﾄｰﾁｶ強度'},
     
-    // ACC 
     'acc_ball_cnt': {cat: 'acc', name: '初期弾数追加[RARE]', short: '初期弾数'},
     'acc_sat_hp': {cat: 'acc', name: '子機(体力)', short: '子機体力'},
     'acc_sat_spd': {cat: 'acc', name: '子機(移動速度)', short: '子機速度'},
+    'acc_sat_cnt': {cat: 'acc', name: '子機(追加)', short: '子機数'},
     'acc_score_up': {cat: 'acc', name: '獲得ﾎﾟｲﾝﾄUP', short: 'ﾎﾟｲﾝﾄ獲得量'},
     'acc_life_up': {cat: 'acc', name: '最大ﾗｲﾌUP', short: '最大ﾗｲﾌ'}
 };
@@ -144,7 +156,7 @@ const APPLY_EFFECTS = {
     'main_exp_dmg': (l, s) => { s.hasExp = true; s.mainExplodeDmg += l; },
 
     'sub_lsr_dmg': (l, s) => { s.lsrDmg += l; },
-    'sub_lsr_spd': (l, s) => { s.lsrInterval = Math.max(4, 40 - l * 2); }, // 初期値40から削減
+    'sub_lsr_spd': (l, s) => { s.lsrInterval = Math.max(4, 40 - l * 2); },
     'sub_lsr_prc': (l, s) => { s.lsrPierce += l; },
     'sub_lsr_thk': (l, s) => { s.lsrWidth += l * 3; },
 
@@ -154,7 +166,6 @@ const APPLY_EFFECTS = {
     'sub_msl_cnt': (l, s) => { s.hasMsl = true; s.mslCnt += l; },
     'sub_bomb_req': (l, s) => { s.bombReq -= l; },
 
-    'opt_sat_cnt': (l, s) => { s.satCnt += l; },
     'opt_rot_cnt': (l, s) => { s.rotCnt += l; },
     'opt_rot_size': (l, s) => { s.rotSize += l * 2; },
     'opt_rot_spd': (l, s) => { s.rotSpd += l * 0.01; },
@@ -165,51 +176,23 @@ const APPLY_EFFECTS = {
     'acc_ball_cnt': (l, s) => { s.accBalls += l; },
     'acc_sat_hp': (l, s) => { s.satHp += l * 2; },
     'acc_sat_spd': (l, s) => { s.satSpd += l * 1.5; },
-    
+    'acc_sat_cnt': (l, s) => { s.satCnt += l; },
     'acc_score_up': (l, s) => { s.scoreMult += l * 0.5; },
     'acc_life_up': (l, s) => { s.maxLife += l; }
 };
 
-function generateCustomDrop(layerCount, cat) {
-    const id = 'drop_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-    
-    let posPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none' && ITEM_DEFS[k].cat === cat);
-    if (posPool.length === 0) posPool = ['acc_score_up']; 
-    let negPool = Object.keys(ITEM_DEFS).filter(k => k !== 'none');
-    
-    let posCount = Math.floor(Math.random() * 2) + 2; 
-    let effects = [];
-    let basePower = Math.max(1, Math.floor(layerCount / 100));
-    
-    for(let i=0; i<posCount; i++) {
-        let ef = posPool[Math.floor(Math.random() * posPool.length)];
-        let lvl = basePower + Math.floor(Math.random() * 2); 
-        if (ef.includes('cnt') || ef.includes('life') || ef.includes('req')) lvl = Math.max(1, Math.floor(lvl / 3));
-        effects.push({ type: ef, level: lvl });
-    }
-    
-    let negEf = negPool[Math.floor(Math.random() * negPool.length)];
-    let negLvl = -(basePower + Math.floor(Math.random() * 2));
-    if (negEf.includes('cnt') || negEf.includes('life') || negEf.includes('req')) negLvl = -Math.max(1, Math.floor(Math.abs(negLvl) / 3));
-    effects.push({ type: negEf, level: negLvl });
-    
-    const prefixes = ['【遺物】', '【禁忌】', '【異界の】', '【魔改造】', '【極】'];
-    const typeNames = {'main':'主砲', 'sub':'副兵装', 'opt':'支援機', 'acc':'宝具'};
-    let name = prefixes[Math.floor(Math.random()*prefixes.length)] + typeNames[cat] + ' No.' + Math.floor(Math.random()*99);
-    
-    return { id, cat, name, effects };
-}
-
 class SaveData {
     constructor() { this.load(); }
     load() {
-        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v11')) || {}; } catch(e) {}
+        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v12')) || {}; } catch(e) {}
         this.loadout = data.loadout || {main: 'main_normal', sub: 'none', option: 'none', acc1: 'none', acc2: 'none'};
         this.total_points = data.total_points || 0;
         this.item_counts = data.item_counts || {'main_normal': 1};
         this.custom_items = data.custom_items || {};
+        this.synth_items = data.synth_items || {};
+        this.max_manual_layer = data.max_manual_layer || 0; // 手動最高到達層
     }
-    save() { try { localStorage.setItem('megabreakout_save_v11', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items})); } catch(e) {} }
+    save() { try { localStorage.setItem('megabreakout_save_v12', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
     getLevel(itemId) {
         if (itemId === 'none') return 0;
         const c = this.item_counts[itemId] || 0; if (c <= 0) return 0;
@@ -238,7 +221,7 @@ class Game {
     buildStats() {
         this.s = {
             mainDmg: 1, mainPierce: 0, hasExp: false, mainExplodeRad: 40, mainExplodeDmg: 1, mainSpeed: 4,
-            lsrInterval: 40, lsrPierce: 0, lsrWidth: 4, lsrDmg: 1, // 初期連射力ダウン (40フレームごと)
+            lsrInterval: 40, lsrPierce: 0, lsrWidth: 4, lsrDmg: 1,
             hasMsl: false, mslCnt: 1, mslSpd: 1.0, mslRad: 50, mslDmg: 1,
             satCnt: 0, satHp: 1, satSpd: 2, accBalls: 0,
             bombReq: 20, rotCnt: 0, rotSize: 8, rotSpd: 0.05, pillCnt: 0, pillSize: 30, pillHp: 1,
@@ -252,14 +235,23 @@ class Game {
             let slotCat = slot.replace(/\d/, '');
             if (slotCat === 'option') slotCat = 'opt';
 
-            if (save.custom_items[itemId]) {
-                save.custom_items[itemId].effects.forEach(ef => {
+            if (save.custom_items[itemId] || save.synth_items[itemId]) {
+                const itemData = save.custom_items[itemId] || save.synth_items[itemId];
+                const itemLvl = itemData.level || 1;
+                
+                itemData.effects.forEach(ef => {
                     const def = ITEM_DEFS[ef.type];
                     if (!def) return;
-                    if (ef.level > 0) {
-                        if (slotCat === 'opt' || slotCat === 'acc' || def.cat === slotCat) APPLY_EFFECTS[ef.type](ef.level, this.s);
+                    
+                    // 合成装備のレベルスケーリング (ef.level は基本値)
+                    const actualLevel = ef.level * itemLvl;
+                    
+                    if (actualLevel > 0) {
+                        if (slotCat === 'opt' || slotCat === 'acc' || def.cat === slotCat || itemData.cat === 'mix') {
+                            APPLY_EFFECTS[ef.type](actualLevel, this.s);
+                        }
                     } else {
-                        APPLY_EFFECTS[ef.type](ef.level, this.s);
+                        APPLY_EFFECTS[ef.type](actualLevel, this.s);
                     }
                 });
             } else {
@@ -307,6 +299,19 @@ class Game {
     }
 
     advanceLayer() {
+        if (!this.autoMode) {
+            if (this.totalLayers > save.max_manual_layer) {
+                save.max_manual_layer = this.totalLayers;
+                save.save();
+            }
+        } else {
+            // オート時は最高到達層でループ（再起動）
+            if (this.totalLayers >= save.max_manual_layer && save.max_manual_layer > 0) {
+                this.pendingRestart = true;
+                return;
+            }
+        }
+        
         this.advanceTimer = 0; 
         this.totalLayers++;
         this.blocks.forEach(b => { b.y += this.ROW_H; });
@@ -366,7 +371,7 @@ class Game {
         this.satellites = []; if (this.s.satCnt <= 0) return;
         let spacing = canvas.width / (this.s.satCnt + 1);
         for (let i = 0; i < this.s.satCnt; i++) {
-            this.satellites.push({ x: spacing * (i+1), y: this.paddle.y, w: 24, h: 10, hp: this.s.satHp, maxHp: this.s.satHp });
+            this.satellites.push({ x: spacing * (i+1), y: this.paddle.y, w: 24, h: 10, hp: this.s.satHp, maxHp: this.s.satHp, dx: 0 });
         }
     }
 
@@ -431,11 +436,7 @@ class Game {
             if (b.y <= hw) { b.vy *= -1; wallHit = true; }
             if (b.y > this.ctrlY) { this.balls.splice(i, 1); continue; }
 
-            if (wallHit) {
-                b.activePierce = 0;
-                b.activeExpDmg = 0;
-                b.activeExpRad = 0;
-            }
+            if (wallHit) { b.activePierce = 0; b.activeExpDmg = 0; b.activeExpRad = 0; }
         }
 
         if (this.laserActiveTime > 0) {
@@ -482,12 +483,9 @@ class Game {
             });
         }
         
-        // ★ 子機の独立バラバラ挙動
         if (this.satellites.length > 0) {
             this.satellites.forEach((sat, i) => {
                 let targetX = canvas.width / 2, closestDist = Infinity, targetBall = null;
-                
-                // 子機ごとに一番自分に近い（かつ下に向かっている）ボールを狙う
                 this.balls.forEach(b => {
                     let dist = Math.abs(b.x - sat.x) + Math.abs(this.ctrlY - b.y) * 2; 
                     if (b.vy > 0 && dist < closestDist) { closestDist = dist; targetBall = b; }
@@ -495,7 +493,6 @@ class Game {
                 if (!targetBall && this.balls.length > 0) targetBall = this.balls[0];
                 if (targetBall) targetX = targetBall.x;
 
-                // お互いに少し距離をとる（反発力）
                 let sep = 0;
                 this.satellites.forEach((other, j) => {
                     if (i !== j) {
@@ -505,11 +502,10 @@ class Game {
                 });
                 targetX += sep + (i % 2 === 0 ? 10 : -10);
 
-                // スムーズ移動
                 let moveSpd = this.s.satSpd;
                 sat.x += (targetX - sat.x) * (moveSpd * 0.03) + Math.sign(targetX - sat.x) * (moveSpd * 0.5);
                 sat.x = Math.max(sat.w/2, Math.min(canvas.width - sat.w/2, sat.x));
-                sat.y = this.paddle.y; // Y軸はパドルと完全同一
+                sat.y = this.paddle.y;
             });
         }
         
@@ -525,7 +521,9 @@ class Game {
         if (!this.boss) return;
         if (this.boss.y < this.boss.targetY) this.boss.y += 1;
         this.bossTimer += 0.03; this.boss.x = canvas.width / 2 + Math.sin(this.bossTimer * 2) * 100;
-        if (Math.random() < 0.05 + (this.stage * 0.01)) {
+        
+        // ★ボスの攻撃頻度を低下
+        if (Math.random() < 0.015 + (this.stage * 0.005)) {
             const r = Math.random();
             if (r < 0.7) this.fireEnemyAttack(this.boss.x, this.boss.y + 30, 'bullet', true);
             else if (r < 0.9) this.fireEnemyAttack(this.boss.x, this.boss.y + 30, 'laser');
@@ -555,14 +553,12 @@ class Game {
             this.satellites.forEach(sat => {
                 if (intersect(ball, sat) && ball.vy > 0) { 
                     ball.vy *= -1; ball.vx = (ball.x - sat.x) * 0.2; 
-                    bouncedOnFriendly = true;
-                    Sound.play('hit'); 
+                    bouncedOnFriendly = true; Sound.play('hit'); 
                 }
             });
             if (!bouncedOnFriendly && intersect(ball, this.paddle) && ball.vy > 0) { 
                 ball.vy *= -1; ball.vx = (ball.x - this.paddle.x) * 0.15; 
-                bouncedOnFriendly = true;
-                Sound.play('hit');
+                bouncedOnFriendly = true; Sound.play('hit');
             }
             
             if (bouncedOnFriendly) {
@@ -592,7 +588,7 @@ class Game {
                 Sound.play('hit'); sat.hp--; 
                 if(sat.hp<=0) {
                     this.satellites.splice(idx,1);
-                    this.effects.push({ x: sat.x, y: sat.y, r: 20, life: 1.0, color: '#9b59b6' }); // 子機破壊エフェクト
+                    this.effects.push({ x: sat.x, y: sat.y, r: 20, life: 1.0, color: '#9b59b6' }); 
                     Sound.play('explosion');
                 }
             });
@@ -634,11 +630,12 @@ class Game {
             if (this.bombCount >= this.s.bombReq) {
                 this.bombCount = 0; Sound.play('explosion');
                 this.blocks.forEach(b => { 
-                    let pt = Math.floor(10 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
-                    save.total_points += pt; 
+                    save.total_points += Math.floor(10 * this.s.scoreMult); 
                     this.blocksDestroyed++; 
                 });
-                this.blocks = []; this.effects.push({ x: canvas.width/2, y: canvas.height/2, r: canvas.height, life: 1.0, color: 'magenta' });
+                this.blocks = []; 
+                // フラッシュ効果削除、小さな爆風のみ
+                this.effects.push({ x: canvas.width/2, y: canvas.height/2, r: 80, life: 1.0, color: 'magenta' });
                 this.addFloatingText(`BOMB EXECUTED!`, canvas.width/2, this.ctrlY - 50, 'magenta');
             } else { Sound.play('coin'); }
         }
@@ -679,12 +676,10 @@ class Game {
             if (p.pierce > 0) p.pierce--; else this.lasers = this.lasers.filter(l => l !== p); 
         } else { 
             if (p.activeExpDmg > 0) this.triggerAOE(block.x, block.y, p.activeExpDmg, p.activeExpRad); 
-            
             if (p.activePierce > 0) {
                 p.activePierce--; 
             } else {
-                p.vy *= -1; 
-                p.activePierce = 0; p.activeExpDmg = 0; p.activeExpRad = 0; 
+                p.vy *= -1; p.activePierce = 0; p.activeExpDmg = 0; p.activeExpRad = 0; 
             }
         }
     }
@@ -697,8 +692,7 @@ class Game {
         fb.hp -= dmg;
         if (fb.hp <= 0) { 
             Sound.play('explosion'); 
-            let pt = Math.floor(50 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
-            save.total_points += pt; 
+            save.total_points += Math.floor(50 * this.s.scoreMult); 
             this.fallingBlocks.splice(fbIdx, 1); 
         } else { Sound.play('hit'); }
         
@@ -722,8 +716,7 @@ class Game {
             if (Math.random() < 0.05) this.spawnItem(block.x, block.y, 'bomb_item');
         }
         this.blocks.splice(idx, 1);
-        let pt = Math.floor(10 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
-        save.total_points += pt; 
+        save.total_points += Math.floor(10 * this.s.scoreMult); 
         this.blocksDestroyed++;
     }
 
@@ -751,9 +744,8 @@ class Game {
         }
 
         if (this.boss.hp <= 0) {
-            let pt = Math.floor(500 * this.s.scoreMult * (this.autoMode ? 0.2 : 1));
-            save.total_points += pt;
-            let dropRate = this.autoMode ? 0.005 : 0.30;
+            save.total_points += Math.floor(500 * this.s.scoreMult);
+            let dropRate = 0.30;
             const r = Math.random(); if (r < dropRate) this.spawnItem(this.boss.x, this.boss.y, 'boss_drop'); else if (r < dropRate + 0.4) this.spawnItem(this.boss.x, this.boss.y, 'large_ball');
             this.boss = null; this.state = 'PLAYING'; Sound.play('explosion');
             this.stage++;
@@ -867,12 +859,14 @@ class Game {
 const game = new Game();
 
 // ==========================================
-// 4. UI とインベントリの制御 (DOM)
+// 4. UI とインベントリ・合成の制御 (DOM)
 // ==========================================
 const titleLayer = document.getElementById('title-layer');
 const equipLayer = document.getElementById('equip-layer');
 const invModal = document.getElementById('inventory-modal');
+const synthModal = document.getElementById('synth-modal');
 const btnAutoStop = document.getElementById('btn-auto-stop');
+let synthSelected = [];
 
 titleLayer.addEventListener('click', () => { Sound.play('coin'); showEquipMenu(""); });
 
@@ -882,8 +876,10 @@ function updateAllEquipBtns() {
         let name = ITEM_DEFS[itemId] ? ITEM_DEFS[itemId].name : "不明な装備";
         
         if (itemId !== 'none') {
-            if (save.custom_items[itemId]) {
-                name = `★ ${save.custom_items[itemId].name}`;
+            if (save.custom_items[itemId] || save.synth_items[itemId]) {
+                const itemData = save.custom_items[itemId] || save.synth_items[itemId];
+                const itemLvl = itemData.level || 1;
+                name = `★ ${itemData.name} [Lv.${itemLvl}]`;
             } else {
                 const lvl = save.getLevel(itemId);
                 name = `${name} [Lv.${lvl}]${lvl >= 20 ? ' MAX' : ''}`;
@@ -895,7 +891,7 @@ function updateAllEquipBtns() {
 }
 
 function showEquipMenu(msg) {
-    game.state = 'EQUIP'; titleLayer.classList.add('hidden'); equipLayer.classList.remove('hidden'); invModal.classList.add('hidden');
+    game.state = 'EQUIP'; titleLayer.classList.add('hidden'); equipLayer.classList.remove('hidden'); invModal.classList.add('hidden'); synthModal.classList.add('hidden');
     document.getElementById('equip-title').innerText = msg ? msg : '【 装備変更 & 再挑戦 】';
     document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
     document.getElementById('gacha-msg').innerText = '';
@@ -910,28 +906,48 @@ function showEquipMenu(msg) {
         const listEl = document.getElementById('inv-list');
         listEl.innerHTML = '';
         
-        const createInvItem = (itemId, isCustom = false) => {
+        const createInvItem = (itemId, itemData = null) => {
             const div = document.createElement('div');
             div.className = 'inv-item';
             
-            if (isCustom) {
-                const item = save.custom_items[itemId];
-                div.style.borderLeft = '4px solid #f1c40f';
+            if (itemData) {
+                div.style.borderLeft = itemData.cat === 'mix' ? '4px solid #9b59b6' : '4px solid #f1c40f';
+                const itemLvl = itemData.level || 1;
                 
-                let effectStr = item.effects.map(ef => {
+                let effectStr = itemData.effects.map(ef => {
                     const def = ITEM_DEFS[ef.type];
                     if (!def) return '';
                     let sName = def.short;
-                    let isMerit = ef.level > 0;
+                    let actualLevel = ef.level * itemLvl; // ★ レベル補正
+                    let isMerit = actualLevel > 0;
                     
                     let isActive = true;
-                    if (isMerit && targetCat !== 'opt' && targetCat !== 'acc' && def.cat !== targetCat) isActive = false;
+                    if (isMerit && targetCat !== 'opt' && targetCat !== 'acc' && def.cat !== targetCat && itemData.cat !== 'mix') isActive = false;
                     
                     let cls = isMerit ? (isActive ? '' : 'disabled') : 'demerit';
-                    return `<span class="${cls}">${sName}${ef.level > 0 ? '+' : ''}${Math.abs(ef.level)}</span>`;
+                    return `<span class="${cls}">${sName}${isMerit ? '+' : ''}${actualLevel}</span>`;
                 }).join(' / ');
                 
-                div.innerHTML = `<span class="inv-name">${item.name}</span><div class="inv-eff">${effectStr}</div>`;
+                let nameHtml = `<span class="inv-name">${itemData.name} [Lv.${itemLvl}]</span>`;
+                
+                // カスタム装備（合成以外）には売却ボタン
+                if (!itemData.id.startsWith('synth_')) {
+                    const sellBtn = document.createElement('button');
+                    sellBtn.className = 'btn-sell';
+                    sellBtn.innerText = '売却';
+                    sellBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        delete save.custom_items[itemId];
+                        if(save.loadout[slotKey] === itemId) save.loadout[slotKey] = 'none';
+                        save.total_points += 500;
+                        save.save(); Sound.play('coin'); div.remove();
+                        document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
+                    };
+                    div.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
+                    div.appendChild(sellBtn);
+                } else {
+                    div.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
+                }
             } else {
                 let name = ITEM_DEFS[itemId].name;
                 if (itemId !== 'none') {
@@ -941,7 +957,8 @@ function showEquipMenu(msg) {
                 div.innerText = name;
             }
             
-            div.onclick = () => {
+            div.onclick = (e) => {
+                if(e.target.className === 'btn-sell') return;
                 save.loadout[slotKey] = itemId;
                 save.save(); Sound.play('coin');
                 showEquipMenu("");
@@ -954,9 +971,11 @@ function showEquipMenu(msg) {
         GACHA_POOL.filter(k => ITEM_DEFS[k].cat === targetCat && save.item_counts[k] > 0).forEach(k => {
             listEl.appendChild(createInvItem(k));
         });
-        
+        Object.values(save.synth_items).forEach(item => {
+            listEl.appendChild(createInvItem(item.id, item));
+        });
         Object.values(save.custom_items).filter(item => item.cat === targetCat).forEach(item => {
-            listEl.appendChild(createInvItem(item.id, true));
+            listEl.appendChild(createInvItem(item.id, item));
         });
         
         equipLayer.classList.add('hidden');
@@ -966,7 +985,6 @@ function showEquipMenu(msg) {
 });
 
 document.getElementById('btn-inv-close').addEventListener('click', () => { showEquipMenu(""); });
-
 document.getElementById('btn-start').addEventListener('click', () => { equipLayer.classList.add('hidden'); game.autoMode = false; btnAutoStop.classList.add('hidden'); game.initGame(); });
 document.getElementById('btn-auto-start').addEventListener('click', () => { equipLayer.classList.add('hidden'); game.autoMode = true; btnAutoStop.classList.remove('hidden'); game.initGame(); });
 btnAutoStop.addEventListener('click', () => { game.autoMode = false; btnAutoStop.classList.add('hidden'); Sound.play('coin'); });
@@ -995,6 +1013,81 @@ function pullGacha(isBulk) {
 
 document.getElementById('btn-gacha-1').addEventListener('click', () => pullGacha(false));
 document.getElementById('btn-gacha-all').addEventListener('click', () => pullGacha(true));
+
+// ★ 合成システム
+document.getElementById('btn-synth-menu').addEventListener('click', () => {
+    equipLayer.classList.add('hidden'); synthModal.classList.remove('hidden');
+    synthSelected = [];
+    refreshSynthList();
+});
+
+document.getElementById('btn-synth-close').addEventListener('click', () => { showEquipMenu(""); });
+
+function refreshSynthList() {
+    const listEl = document.getElementById('synth-list');
+    listEl.innerHTML = '';
+    const execBtn = document.getElementById('btn-synth-exec');
+    
+    let lv20Items = GACHA_POOL.filter(k => save.getLevel(k) === 20);
+    
+    if (lv20Items.length < 2) {
+        listEl.innerHTML = '<p style="color:white; text-align:center;">Lv.20のガチャ装備が2つ以上必要です</p>';
+        execBtn.innerText = "合成実行 (2つ選択してください)";
+        execBtn.style.background = "#7f8c8d";
+        return;
+    }
+
+    lv20Items.forEach(itemId => {
+        const div = document.createElement('div');
+        div.className = 'inv-item' + (synthSelected.includes(itemId) ? ' selected' : '');
+        div.innerText = `${ITEM_DEFS[itemId].name} [Lv.20 MAX]`;
+        
+        div.onclick = () => {
+            if (synthSelected.includes(itemId)) {
+                synthSelected = synthSelected.filter(id => id !== itemId);
+            } else {
+                if (synthSelected.length < 2) synthSelected.push(itemId);
+            }
+            refreshSynthList();
+        };
+        listEl.appendChild(div);
+    });
+
+    if (synthSelected.length === 2) {
+        execBtn.innerText = "★ 合成実行 ★";
+        execBtn.style.background = "#9b59b6";
+    } else {
+        execBtn.innerText = "合成実行 (2つ選択してください)";
+        execBtn.style.background = "#7f8c8d";
+    }
+}
+
+document.getElementById('btn-synth-exec').addEventListener('click', () => {
+    if (synthSelected.length !== 2) return;
+    
+    let keys = [...synthSelected].sort();
+    let synthId = 'synth_' + keys.join('_');
+    
+    if (save.synth_items[synthId]) {
+        save.synth_items[synthId].level++;
+        alert(`合成成功！\n既存の合成装備が Lv.${save.synth_items[synthId].level} に強化されました！`);
+    } else {
+        save.synth_items[synthId] = {
+            id: synthId,
+            cat: 'mix', // mixは全枠で発動可能
+            name: `【合】${ITEM_DEFS[keys[0]].short} & ${ITEM_DEFS[keys[1]].short}`,
+            effects: [{ type: keys[0], level: 1 }, { type: keys[1], level: 1 }],
+            level: 1
+        };
+        alert(`合成成功！\n新しい合成装備【Lv.1】を作成しました！`);
+    }
+    
+    Sound.play('powerup');
+    synthSelected = [];
+    save.save();
+    refreshSynthList();
+});
+
 </script>
 </body>
 </html>
