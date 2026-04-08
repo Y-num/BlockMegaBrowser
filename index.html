@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MEGA BREAKOUT V13.3</title>
+    <title>MEGA BREAKOUT V13.4</title>
     <style>
         /* タップ干渉防止・全体リセット */
         body { margin: 0; padding: 0; background: #0b0f19; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -21,7 +21,7 @@
         }
         .hidden { display: none !important; }
         
-        /* ★ メニューの中身を包んで上下中央に自動配置するコンテナ */
+        /* メニューの中身を包んで上下中央に自動配置するコンテナ */
         .menu-content {
             width: 100%; max-height: 90vh; overflow-y: auto;
             display: flex; flex-direction: column; align-items: center;
@@ -55,9 +55,8 @@
         .btn-start { background: linear-gradient(145deg, #2ecc71, #27ae60); color: white; margin-top: 20px; font-size: 16px; cursor: pointer; padding: 12px; font-weight: bold; border: none; border-radius: 12px; width: 85%; text-align: center; box-shadow: 0 4px 10px rgba(46,204,113,0.4); display: block; }
         .btn-auto-start { background: rgba(0,0,0,0.3); color: #f39c12; margin-top: 12px; margin-bottom: 20px; font-size: 14px; cursor: pointer; padding: 10px; font-weight: bold; border: 1px solid #f39c12; border-radius: 12px; width: 85%; text-align: center; display: block; }
         
-        /* インゲームのHUDを少し下げたのに合わせ、ボタンもカメラ穴を回避する位置へ */
         #btn-auto-stop { 
-            position: absolute; top: 75px; left: 50%; transform: translateX(-50%); 
+            position: absolute; top: 95px; left: 50%; transform: translateX(-50%); 
             background: linear-gradient(135deg, #ff4757, #e74c3c); color: white; 
             border: 1px solid rgba(255,255,255,0.5); padding: 8px 20px; font-size: 13px; 
             border-radius: 20px; font-weight: bold; cursor: pointer; 
@@ -84,7 +83,7 @@
     
     <div id="title-layer" class="ui-layer">
         <div class="menu-content">
-            <h1>MEGA BREAKOUT<br><span style="font-size:20px; color:#f1c40f;">V13.3</span></h1>
+            <h1>MEGA BREAKOUT<br><span style="font-size:20px; color:#f1c40f;">V13.4</span></h1>
             <div class="blink">画面をタップしてスタート</div>
         </div>
     </div>
@@ -196,21 +195,25 @@ const APPLY_EFFECTS = {
     'main_pierce': (l, s) => { s.mainPierce += l; },
     'main_exp_rad': (l, s) => { s.hasExp = true; s.mainExplodeRad += l * 10; },
     'main_exp_dmg': (l, s) => { s.hasExp = true; s.mainExplodeDmg += l; },
+
     'sub_lsr_dmg': (l, s) => { s.lsrDmg += l; },
     'sub_lsr_spd': (l, s) => { s.lsrInterval = Math.max(4, 40 - l * 2); },
     'sub_lsr_prc': (l, s) => { s.lsrPierce += l; },
     'sub_lsr_thk': (l, s) => { s.lsrWidth += l * 3; },
+
     'sub_msl_dmg': (l, s) => { s.hasMsl = true; s.mslDmg += l * 2; },
     'sub_msl_spd': (l, s) => { s.hasMsl = true; s.mslSpd += l * 0.2; },
     'sub_msl_rad': (l, s) => { s.hasMsl = true; s.mslRad += l * 15; },
     'sub_msl_cnt': (l, s) => { s.hasMsl = true; s.mslCnt += l; },
     'sub_bomb_req': (l, s) => { s.bombReq -= l; },
+
     'opt_rot_cnt': (l, s) => { s.rotCnt += l; },
     'opt_rot_size': (l, s) => { s.rotSize += l * 2; },
     'opt_rot_spd': (l, s) => { s.rotSpd += l * 0.01; },
     'opt_pill_size': (l, s) => { s.pillSize += l * 4; },
     'opt_pill_cnt': (l, s) => { s.pillCnt += l; },
     'opt_pill_hp': (l, s) => { s.pillHp += l * 2; },
+
     'acc_ball_cnt': (l, s) => { s.accBalls += l; },
     'acc_sat_hp': (l, s) => { s.satHp += l * 2; },
     'acc_sat_spd': (l, s) => { s.satSpd += l * 1.5; },
@@ -222,7 +225,7 @@ const APPLY_EFFECTS = {
 class SaveData {
     constructor() { this.load(); }
     load() {
-        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v12')) || {}; } catch(e) {}
+        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v13')) || {}; } catch(e) {}
         this.loadout = data.loadout || {main: 'main_normal', sub: 'none', option: 'none', acc1: 'none', acc2: 'none'};
         this.total_points = data.total_points || 0;
         this.item_counts = data.item_counts || {'main_normal': 1};
@@ -230,7 +233,7 @@ class SaveData {
         this.synth_items = data.synth_items || {};
         this.max_manual_layer = data.max_manual_layer || 0;
     }
-    save() { try { localStorage.setItem('megabreakout_save_v12', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
+    save() { try { localStorage.setItem('megabreakout_save_v13', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
     getLevel(itemId) {
         if (itemId === 'none') return 0;
         const c = this.item_counts[itemId] || 0; if (c <= 0) return 0;
@@ -335,7 +338,9 @@ class Game {
         if (this.s.lsrWidth < 2) this.s.lsrWidth = 2;
         if (this.s.accBalls < 0) this.s.accBalls = 0;
         
-        this.ROW_H = (this.ctrlY - 80) / 20; 
+        // ★ ブロック出現のトップマージンを設定 (HUDと被らないようにする)
+        this.topMargin = 100;
+        this.ROW_H = (this.ctrlY - this.topMargin) / 20; 
     }
 
     resetGameVars() {
@@ -355,7 +360,9 @@ class Game {
         this.lives = this.s.maxLife;
 
         this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
-        for (let i = 0; i < 5; i++) this.spawnRow(80 + (i * this.ROW_H));
+        
+        // ★ Y座標をtopMargin基準に変更
+        for (let i = 0; i < 5; i++) this.spawnRow(this.topMargin + (i * this.ROW_H));
         
         const initialBalls = 1 + this.s.accBalls;
         for (let i = 0; i < initialBalls; i++) {
@@ -380,7 +387,7 @@ class Game {
         this.advanceTimer = 0; 
         this.totalLayers++;
         this.blocks.forEach(b => { b.y += this.ROW_H; });
-        this.spawnRow(80);
+        this.spawnRow(this.topMargin); // ★ Y座標をtopMarginに変更
         if (this.totalLayers > 0 && this.totalLayers % 10 === 0) this.spawnBoss();
     }
 
@@ -451,7 +458,8 @@ class Game {
     }
 
     spawnBoss() {
-        this.state = 'BOSS'; this.boss = { x: canvas.width / 2, y: -60, w: 150, h: 60, color: '#e056fd', hp: 30 + (this.stage * 20), targetY: 100 }; Sound.play('laser');
+        // ★ボスのY座標もHUDに被らないように下げる
+        this.state = 'BOSS'; this.boss = { x: canvas.width / 2, y: -60, w: 150, h: 60, color: '#e056fd', hp: 30 + (this.stage * 20), targetY: this.topMargin + 20 }; Sound.play('laser');
     }
 
     update() {
@@ -604,7 +612,7 @@ class Game {
                 const dx = this.paddle.x - x, dy = this.paddle.y - y, dist = Math.max(Math.hypot(dx, dy), 1);
                 vx = (dx / dist) * speed; vy = (dy / dist) * speed;
             }
-            this.enemyBullets.push({ x, y, w: 12, h: 12, color: 'red', vx, vy });
+            this.enemyBullets.push({ x, y, w: 12, h: 12, color: '#ff4757', vx, vy });
         } else if (type === 'laser') { this.enemyBullets.push({ x, y, w: 6, h: 80, color: '#ff6b81', vx: 0, vy: 12 }); } 
         else if (type === 'falling_block') { this.fallingBlocks.push({ x, y, w: 30, h: 30, color: '#7f8c8d', vx: 0, vy: 2.5, hp: 3 + this.stage }); }
     }
@@ -827,7 +835,8 @@ class Game {
         }
         
         let reachedLimit = false;
-        this.blocks.forEach(b => { if (b.y >= 80 + 19 * this.ROW_H) reachedLimit = true; });
+        // ★ HUDに被らないよう、判定ラインもtopMargin基準にする
+        this.blocks.forEach(b => { if (b.y >= this.topMargin + 19 * this.ROW_H) reachedLimit = true; });
         if (reachedLimit) {
             Sound.play('explosion');
             if (this.autoMode) { this.pendingRestart = true; return; }
@@ -856,19 +865,20 @@ class Game {
         ctx.fillStyle = this.state === 'TITLE' ? '#111' : '#0b0f19'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (this.state === 'TITLE' || this.state === 'EQUIP') return;
 
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'; ctx.beginPath(); ctx.moveTo(0, 80 + 19 * this.ROW_H); ctx.lineTo(canvas.width, 80 + 19 * this.ROW_H); ctx.stroke();
+        // Danger Line (topMargin基準)
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'; ctx.beginPath(); ctx.moveTo(0, this.topMargin + 19 * this.ROW_H); ctx.lineTo(canvas.width, this.topMargin + 19 * this.ROW_H); ctx.stroke();
         
         ctx.fillStyle = '#12182b'; ctx.fillRect(0, this.ctrlY, canvas.width, canvas.height - this.ctrlY);
         ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; ctx.fillRect(0, this.ctrlY, canvas.width, 2);
         
-        let safeTop = 35; // HUDを少し下げてノッチ回避
-        ctx.fillStyle = 'rgba(15, 20, 35, 0.8)'; ctx.fillRect(0, 0, canvas.width, 50 + safeTop);
+        // HUD
+        ctx.fillStyle = 'rgba(15, 20, 35, 0.8)'; ctx.fillRect(0, 0, canvas.width, this.topMargin - 15);
         ctx.fillStyle = '#00ffff'; ctx.font = '14px Helvetica-Bold'; ctx.textAlign = 'center';
         
         const modeText = this.autoMode ? "[AUTO]" : `LIFE:${this.lives}`;
-        ctx.fillText(`Lv.${this.totalLayers} | ${modeText} | PTS:${save.total_points}`, canvas.width/2, 20 + safeTop);
+        ctx.fillText(`Lv.${this.totalLayers} | ${modeText} | PTS:${save.total_points}`, canvas.width/2, 30);
         ctx.fillStyle = '#bdc3c7'; ctx.font = '12px Helvetica-Bold';
-        ctx.fillText(`MAX: Lv.${save.max_manual_layer} | BOMB: ${this.bombCount}/${this.s.bombReq}`, canvas.width/2, 40 + safeTop);
+        ctx.fillText(`MAX: Lv.${save.max_manual_layer} | BOMB: ${this.bombCount}/${this.s.bombReq}`, canvas.width/2, 55);
 
         const drawRect = (obj, isBlock=false) => {
             ctx.fillStyle = obj.color || 'white'; ctx.fillRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
