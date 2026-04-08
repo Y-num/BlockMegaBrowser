@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MEGA BREAKOUT V22.1</title>
+    <title>MEGA BREAKOUT V23</title>
     <style>
         /* 見やすくクリーンなモダンデザイン */
-        body { margin: 0; padding: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; user-select: none; -webkit-user-select: none; }
+        body { margin: 0; padding: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
         #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 850px; background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
         
         canvas { display: block; width: 100%; height: 100%; touch-action: none; }
@@ -17,13 +17,14 @@
         .ui-layer { 
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(15, 23, 42, 0.98); z-index: 10; color: #f8fafc; touch-action: auto;
+            background: rgba(15, 23, 42, 0.98); z-index: 10; color: #f8fafc; 
         }
         .hidden { display: none !important; }
         .modal { z-index: 30; }
 
+        /* スクロール領域はtouch-action: autoで確実にスクロールさせる */
         .menu-content { 
-            width: 100%; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; 
+            width: 100%; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: auto;
             display: flex; flex-direction: column; align-items: center; padding: 20px 0; box-sizing: border-box; 
         }
 
@@ -39,7 +40,7 @@
         .stats-text { color: #38bdf8; font-size: 15px; margin: 5px 0; font-weight: bold; }
         .sub-text { font-size: 12px; color: #94a3b8; margin-bottom: 15px; text-align: center; }
         
-        button { font-family: inherit; outline: none; border: none; cursor: pointer; flex-shrink: 0; transition: transform 0.1s; touch-action: manipulation; }
+        button { font-family: inherit; outline: none; border: none; cursor: pointer; flex-shrink: 0; transition: transform 0.1s; }
         button:active { transform: scale(0.96); }
         
         .equip-btn { background: #334155; color: #f8fafc; width: 85%; padding: 14px; margin: 5px 0; font-size: 14px; border-radius: 8px; font-weight: 600; display: block; }
@@ -53,8 +54,8 @@
         
         #btn-auto-stop { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; padding: 10px 24px; font-size: 14px; border-radius: 30px; font-weight: bold; z-index: 50; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         
-        .list-box { width: 90%; max-height: 50vh; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; margin-top: 10px; }
-        .inv-item { background: #1e293b; border: 2px solid #334155; padding: 14px; border-radius: 8px; color: white; text-align: left; position: relative; width: 100%; box-sizing: border-box; }
+        .list-box { width: 90%; max-height: 50vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; margin-top: 10px; }
+        .inv-item { background: #1e293b; border: 2px solid #334155; padding: 14px; border-radius: 8px; color: white; text-align: left; position: relative; width: 100%; box-sizing: border-box; cursor: pointer; }
         .inv-item.selected { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
         .inv-name { font-weight: bold; color: #f8fafc; margin-bottom: 6px; display: inline-block; width: 70%; font-size: 14px; pointer-events: none; }
         .inv-eff { font-size: 12px; color: #94a3b8; pointer-events: none; }
@@ -71,7 +72,6 @@
         #error-log { position: absolute; top: 0; left: 0; z-index: 9999; color: white; background: red; font-size: 10px; pointer-events: none; padding: 5px; display: none; }
     </style>
     <script>
-        // エラー探知機
         window.onerror = function(msg, url, line) {
             var el = document.getElementById('error-log');
             if (el) { el.style.display = 'block'; el.innerText += " ERR: " + msg + " (L:" + line + ")\n"; }
@@ -89,7 +89,7 @@
     <div id="title-layer" class="ui-layer" onclick="startTitleScreen()">
         <div class="menu-content no-pointer">
             <h1>MEGA BREAKOUT</h1>
-            <div class="subtitle">VERSION 22.1</div>
+            <div class="subtitle">VERSION 23</div>
             <div class="blink">画面をタップしてスタート</div>
         </div>
     </div>
@@ -236,9 +236,9 @@ class SaveData {
     load() {
         let data = {}; 
         try { 
-            const str = localStorage.getItem('megabreakout_save_v22');
+            const str = localStorage.getItem('megabreakout_save_v23');
             if (str) data = JSON.parse(str); 
-        } catch(e) {}
+        } catch(e) { console.error(e); }
         
         this.loadout = data.loadout || {main: 'main_normal', sub: 'none', option: 'none', acc1: 'none', acc2: 'none'};
         this.total_points = data.total_points || 0;
@@ -247,6 +247,7 @@ class SaveData {
         this.synth_items = data.synth_items || {};
         this.max_manual_layer = data.max_manual_layer || 0;
         
+        // データ保護
         ['main', 'sub', 'option', 'acc1', 'acc2'].forEach(slot => {
             const id = this.loadout[slot];
             if (id !== 'none' && !ITEM_DEFS[id] && !this.custom_items[id] && !this.synth_items[id]) {
@@ -256,7 +257,7 @@ class SaveData {
     }
     save() { 
         try { 
-            localStorage.setItem('megabreakout_save_v22', JSON.stringify({
+            localStorage.setItem('megabreakout_save_v23', JSON.stringify({
                 loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, 
                 custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer
             })); 
@@ -1027,11 +1028,13 @@ class Game {
 }
 
 // ==========================================
-// 5. DOMの確実なイベント登録 (JSで直接セット)
+// 5. グローバル関数とイベントバインド
 // ==========================================
-let synthSelected = [];
-
 function eId(id) { return document.getElementById(id); }
+
+window.startTitleScreen = function() {
+    try { Sound.play('coin'); window.showEquipMenu(""); } catch(e) { console.error(e); }
+};
 
 window.showEquipMenu = function(msg) {
     try {
@@ -1045,60 +1048,28 @@ window.showEquipMenu = function(msg) {
         eId('equip-title').innerText = msg ? msg : '装備変更 & 再挑戦';
         eId('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
         eId('auto-max-label').innerText = `手動最高到達: ${save.max_manual_layer}層`;
-        
-        ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
-            const itemId = save.loadout[slotKey];
-            let name = ITEM_DEFS[itemId] ? ITEM_DEFS[itemId].name : "装備なし";
-            if (itemId !== 'none') {
-                if (save.custom_items[itemId] || save.synth_items[itemId]) {
-                    const itemData = save.custom_items[itemId] || save.synth_items[itemId];
-                    const itemLvl = itemData.level || 1;
-                    name = `★ ${itemData.name} [Lv.${itemLvl}]`;
-                } else {
-                    const lvl = save.getLevel(itemId);
-                    name = `${name} [Lv.${lvl}]${lvl >= 20 ? ' MAX' : ''}`;
-                }
-            }
-            const label = {'main':'MAIN', 'sub':'SUB', 'option':'OPT', 'acc1':'ACC(1)', 'acc2':'ACC(2)'}[slotKey];
-            const btn = eId(`btn-${slotKey}`);
-            if(btn) btn.innerText = `${label} : ${name}`;
-        });
-    } catch(e) { console.error("Menu:", e); }
+        window.updateAllEquipBtns();
+    } catch(e) { console.error(e); }
 };
 
-window.onload = function() {
-    try { window.game = new Game(); } catch(e) { console.error("Init:", e); }
-    
-    const bindClick = (id, fn) => {
-        const el = eId(id);
-        if(el) {
-            el.addEventListener('click', fn);
-            el.addEventListener('touchstart', (e) => { if(e.cancelable) e.preventDefault(); fn(); }, {passive: false});
+window.updateAllEquipBtns = function() {
+    ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
+        const itemId = save.loadout[slotKey];
+        let name = "装備なし";
+        if (itemId && itemId !== 'none') {
+            if (save.custom_items[itemId] || save.synth_items[itemId]) {
+                const itemData = save.custom_items[itemId] || save.synth_items[itemId];
+                const itemLvl = itemData.level || 1;
+                name = `★ ${itemData.name} [Lv.${itemLvl}]`;
+            } else if (ITEM_DEFS[itemId]) {
+                const lvl = save.getLevel(itemId);
+                name = `${ITEM_DEFS[itemId].name} [Lv.${lvl}]${lvl >= 20 ? ' MAX' : ''}`;
+            }
         }
-    };
-
-    bindClick('title-layer', () => { Sound.play('coin'); window.showEquipMenu(""); });
-    
-    bindClick('btn-main', () => window.openInventory('main'));
-    bindClick('btn-sub', () => window.openInventory('sub'));
-    bindClick('btn-option', () => window.openInventory('option'));
-    bindClick('btn-acc1', () => window.openInventory('acc1'));
-    bindClick('btn-acc2', () => window.openInventory('acc2'));
-    
-    bindClick('btn-stats-show', window.showStats);
-    bindClick('btn-stats-close', () => { eId('stats-modal').classList.add('hidden'); window.showEquipMenu(""); });
-    
-    bindClick('btn-gacha-1', () => window.pullGacha(false));
-    bindClick('btn-gacha-all', () => window.pullGacha(true));
-    bindClick('btn-synth-menu', window.openSynth);
-    
-    bindClick('btn-start', () => { eId('equip-layer').classList.add('hidden'); window.game.autoMode = false; window.game.initGame(); });
-    bindClick('btn-auto-start', () => { eId('equip-layer').classList.add('hidden'); eId('btn-auto-stop').classList.remove('hidden'); window.game.autoMode = true; window.game.initGame(); });
-    bindClick('btn-auto-stop', () => { window.game.autoMode = false; eId('btn-auto-stop').classList.add('hidden'); Sound.play('coin'); });
-    
-    bindClick('btn-inv-close', () => { eId('inventory-modal').classList.add('hidden'); window.showEquipMenu(""); });
-    bindClick('btn-synth-close', () => { eId('synth-modal').classList.add('hidden'); window.showEquipMenu(""); });
-    bindClick('btn-synth-exec', window.execSynth);
+        const label = {'main':'MAIN', 'sub':'SUB', 'option':'OPT', 'acc1':'ACC(1)', 'acc2':'ACC(2)'}[slotKey];
+        const btn = eId(`btn-${slotKey}`);
+        if(btn) btn.innerText = `${label} : ${name}`;
+    });
 };
 
 window.showStats = function() {
@@ -1184,7 +1155,8 @@ window.openInventory = function(slotKey) {
                     const sellBtn = document.createElement('button');
                     sellBtn.className = 'btn-sell';
                     sellBtn.innerText = '売却';
-                    const doSell = (e) => {
+                    // 売却ボタンのクリック処理 (伝播を止める)
+                    sellBtn.onclick = (e) => {
                         e.stopPropagation(); e.preventDefault();
                         delete save.custom_items[itemId];
                         if(save.loadout[slotKey] === itemId) save.loadout[slotKey] = 'none';
@@ -1192,8 +1164,6 @@ window.openInventory = function(slotKey) {
                         save.save(); Sound.play('coin'); btn.remove();
                         eId('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
                     };
-                    sellBtn.addEventListener('click', doSell);
-                    sellBtn.addEventListener('touchstart', doSell, {passive: false});
                     btn.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
                     btn.appendChild(sellBtn);
                 } else {
@@ -1208,16 +1178,14 @@ window.openInventory = function(slotKey) {
                 btn.innerText = name;
             }
             
-            const doEquip = (e) => {
+            // アイテム自体のクリック処理
+            btn.onclick = (e) => {
                 if(e.target.className === 'btn-sell') return;
-                e.preventDefault();
                 save.loadout[slotKey] = itemId;
                 save.save(); Sound.play('coin');
                 eId('inventory-modal').classList.add('hidden');
                 window.showEquipMenu("");
             };
-            btn.addEventListener('click', doEquip);
-            btn.addEventListener('touchstart', doEquip, {passive: false});
             return btn;
         };
         
@@ -1231,13 +1199,30 @@ window.openInventory = function(slotKey) {
     } catch(e) { console.error("Inv:", e); }
 };
 
+window.closeModal = function(modalId) {
+    eId(modalId).classList.add('hidden');
+    window.showEquipMenu("");
+};
+
+window.startGame = function(isAuto) {
+    eId('equip-layer').classList.add('hidden'); 
+    window.game.autoMode = isAuto; 
+    if(isAuto) eId('btn-auto-stop').classList.remove('hidden'); 
+    window.game.initGame();
+};
+
+window.stopAutoMode = function() {
+    window.game.autoMode = false; 
+    eId('btn-auto-stop').classList.add('hidden'); 
+    Sound.play('coin');
+};
+
+let synthSelected = [];
 window.openSynth = function() {
-    try {
-        eId('equip-layer').classList.add('hidden'); 
-        eId('synth-modal').classList.remove('hidden');
-        synthSelected = [];
-        window.refreshSynthList();
-    } catch(e) { console.error("SynthOpen:", e); }
+    eId('equip-layer').classList.add('hidden'); 
+    eId('synth-modal').classList.remove('hidden');
+    synthSelected = [];
+    window.refreshSynthList();
 };
 
 window.refreshSynthList = function() {
@@ -1258,67 +1243,81 @@ window.refreshSynthList = function() {
             const btn = document.createElement('div');
             btn.className = 'inv-item' + (synthSelected.includes(itemId) ? ' selected' : '');
             btn.innerText = `${ITEM_DEFS[itemId].name} [Lv.20 MAX]`;
-            
-            const doSelect = (e) => {
-                e.preventDefault();
+            btn.onclick = () => {
                 if (synthSelected.includes(itemId)) synthSelected = synthSelected.filter(id => id !== itemId);
                 else if (synthSelected.length < 2) synthSelected.push(itemId);
                 window.refreshSynthList();
             };
-            btn.addEventListener('click', doSelect);
-            btn.addEventListener('touchstart', doSelect, {passive: false});
             listEl.appendChild(btn);
         });
 
         execBtn.innerText = synthSelected.length === 2 ? "★ 合成を実行する ★" : "2つ選択してください";
-    } catch(e) { console.error("SynthRefresh:", e); }
+    } catch(e) { console.error(e); }
 };
 
 window.execSynth = function() {
-    try {
-        if (synthSelected.length !== 2) return;
-        let keys = [...synthSelected].sort();
-        let synthId = 'synth_' + keys.join('_');
-        
-        if (save.synth_items[synthId]) {
-            save.synth_items[synthId].level++;
-            alert(`強化成功！\nLv.${save.synth_items[synthId].level} になりました！`);
-        } else {
-            save.synth_items[synthId] = {
-                id: synthId, cat: 'mix',
-                name: `【合】${ITEM_DEFS[keys[0]].short} & ${ITEM_DEFS[keys[1]].short}`,
-                effects: [{ type: keys[0], level: 1 }, { type: keys[1], level: 1 }],
-                level: 1
-            };
-            alert(`合成成功！\n新しい合成装備【Lv.1】を作成しました！`);
-        }
-        
-        Sound.play('powerup'); synthSelected = []; save.save(); window.refreshSynthList();
-    } catch(e) { console.error("SynthExec:", e); }
+    if (synthSelected.length !== 2) return;
+    let keys = [...synthSelected].sort();
+    let synthId = 'synth_' + keys.join('_');
+    
+    if (save.synth_items[synthId]) {
+        save.synth_items[synthId].level++;
+        alert(`強化成功！\nLv.${save.synth_items[synthId].level} になりました！`);
+    } else {
+        save.synth_items[synthId] = {
+            id: synthId, cat: 'mix',
+            name: `【合】${ITEM_DEFS[keys[0]].short} & ${ITEM_DEFS[keys[1]].short}`,
+            effects: [{ type: keys[0], level: 1 }, { type: keys[1], level: 1 }],
+            level: 1
+        };
+        alert(`合成成功！\n新しい合成装備【Lv.1】を作成しました！`);
+    }
+    
+    Sound.play('powerup'); synthSelected = []; save.save(); window.refreshSynthList();
 };
 
 window.pullGacha = function(isBulk) {
-    try {
-        const cost = 300;
-        if (save.total_points < cost) return alert("ポイントが足りません");
-        let pool = GACHA_POOL.filter(item => save.getLevel(item) < 20);
-        if (pool.length === 0) return alert("通常ガチャの装備はすべて最大(Lv.20)です");
+    const cost = 300;
+    if (save.total_points < cost) return alert("ポイントが足りません");
+    let pool = GACHA_POOL.filter(item => save.getLevel(item) < 20);
+    if (pool.length === 0) return alert("通常ガチャの装備はすべて最大(Lv.20)です");
 
-        let pulls = isBulk ? Math.floor(save.total_points / cost) : 1;
-        save.total_points -= pulls * cost;
-        
-        let lastItem = "";
-        for(let i=0; i<pulls; i++) {
-            pool = GACHA_POOL.filter(item => save.getLevel(item) < 20);
-            if(pool.length === 0) break;
-            let itemId = pool[Math.floor(Math.random() * pool.length)];
-            save.item_counts[itemId] = (save.item_counts[itemId] || 0) + 1;
-            lastItem = ITEM_DEFS[itemId].name;
-        }
-        
-        Sound.play('powerup'); save.save(); 
-        window.showEquipMenu(isBulk ? `一括ガチャ完了: ${pulls}回引きました` : `★ ${lastItem} をゲット！`);
-    } catch(e) { console.error("Gacha:", e); }
+    let pulls = isBulk ? Math.floor(save.total_points / cost) : 1;
+    save.total_points -= pulls * cost;
+    
+    let lastItem = "";
+    for(let i=0; i<pulls; i++) {
+        pool = GACHA_POOL.filter(item => save.getLevel(item) < 20);
+        if(pool.length === 0) break;
+        let itemId = pool[Math.floor(Math.random() * pool.length)];
+        save.item_counts[itemId] = (save.item_counts[itemId] || 0) + 1;
+        lastItem = ITEM_DEFS[itemId].name;
+    }
+    
+    Sound.play('powerup'); save.save(); 
+    window.showEquipMenu(isBulk ? `一括ガチャ完了: ${pulls}回引きました` : `★ ${lastItem} をゲット！`);
+};
+
+window.onload = function() {
+    try { window.game = new Game(); } catch(e) { console.error("Game Init:", e); }
+    // すべてのイベントを標準の onclick に直結
+    eId('title-layer').onclick = window.startTitleScreen;
+    eId('btn-main').onclick = () => window.openInventory('main');
+    eId('btn-sub').onclick = () => window.openInventory('sub');
+    eId('btn-option').onclick = () => window.openInventory('option');
+    eId('btn-acc1').onclick = () => window.openInventory('acc1');
+    eId('btn-acc2').onclick = () => window.openInventory('acc2');
+    eId('btn-stats-show').onclick = window.showStats;
+    eId('btn-stats-close').onclick = () => window.closeModal('stats-modal');
+    eId('btn-gacha-1').onclick = () => window.pullGacha(false);
+    eId('btn-gacha-all').onclick = () => window.pullGacha(true);
+    eId('btn-synth-menu').onclick = window.openSynth;
+    eId('btn-start').onclick = () => window.startGame(false);
+    eId('btn-auto-start').onclick = () => window.startGame(true);
+    eId('btn-auto-stop').onclick = window.stopAutoMode;
+    eId('btn-inv-close').onclick = () => window.closeModal('inventory-modal');
+    eId('btn-synth-close').onclick = () => window.closeModal('synth-modal');
+    eId('btn-synth-exec').onclick = window.execSynth;
 };
 </script>
 </body>
