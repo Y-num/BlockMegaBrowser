@@ -3,96 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MEGA BREAKOUT V14</title>
+    <title>MEGA BREAKOUT - Luxury Edition -</title>
     <style>
-        /* タップ干渉防止・全体リセット */
-        body { margin: 0; padding: 0; background: #0b0f19; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-        #game-wrapper { position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 850px; background: #12182b; box-shadow: 0 0 20px rgba(0,255,255,0.1); overflow: hidden; }
+        /* 高級感のあるフォントと配色設定 */
+        body { 
+            margin: 0; padding: 0; background: #050505; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; 
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif; /* 明朝・セリフ体ベース */
+            -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; 
+        }
+        #game-wrapper { 
+            position: relative; width: 100%; max-width: 450px; height: 100%; max-height: 850px; 
+            background: #0a0a0c; box-shadow: 0 0 30px rgba(212, 175, 55, 0.15); border: 1px solid rgba(212, 175, 55, 0.3); overflow: hidden; 
+        }
         canvas { display: block; width: 100%; height: 100%; touch-action: none; }
         
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.5); border-radius: 2px; }
         
-        /* 画面全体のレイヤー（中央寄せの土台） */
         .ui-layer { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(15, 20, 35, 0.98); z-index: 10; color: white; 
+            background: rgba(5, 5, 8, 0.95); z-index: 10; color: #fdfbf7; 
         }
         .hidden { display: none !important; }
         
-        /* メニューの中身を包んで上下中央に自動配置するコンテナ */
         .menu-content {
             width: 100%; max-height: 90vh; overflow-y: auto;
             display: flex; flex-direction: column; align-items: center;
             margin: auto; padding: 20px 0; box-sizing: border-box;
         }
 
-        #title-layer { background: radial-gradient(circle, #1a2540 0%, #0b0f19 100%); cursor: pointer; }
-        h1 { font-size: 34px; margin-bottom: 20px; text-shadow: 0 0 15px cyan; text-align: center; font-weight: 900; letter-spacing: 2px; }
-        .blink { font-size: 16px; animation: blinker 1.5s linear infinite; padding: 20px; color: #bdc3c7; }
-        @keyframes blinker { 50% { opacity: 0.3; } }
+        /* タイトル画面（放射状の淡いゴールド光） */
+        #title-layer { background: radial-gradient(circle, #2a2010 0%, #050505 100%); cursor: pointer; }
+        h1 { font-size: 36px; margin-bottom: 20px; color: #d4af37; text-shadow: 0 0 20px rgba(212, 175, 55, 0.4); text-align: center; font-weight: normal; letter-spacing: 4px; }
+        .blink { font-size: 14px; animation: blinker 2s linear infinite; padding: 20px; color: #d4af37; letter-spacing: 2px; }
+        @keyframes blinker { 50% { opacity: 0.2; } }
         
-        h2 { font-size: 22px; margin: 5px 0; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
-        #pt-label { color: #00ffff; font-size: 16px; margin: 5px 0 10px 0; font-weight: bold; }
-        #gacha-msg { color: #f1c40f; font-size: 13px; min-height: 20px; margin-bottom: 5px; font-weight: bold; text-align: center; padding: 0 10px;}
+        h2 { font-size: 20px; margin: 5px 0 15px 0; color: #fdfbf7; border-bottom: 1px solid #d4af37; padding-bottom: 8px; letter-spacing: 2px; font-weight: normal; }
+        #pt-label { color: #d4af37; font-size: 18px; margin: 5px 0 10px 0; }
+        #gacha-msg { color: #fdfbf7; font-size: 13px; min-height: 20px; margin-bottom: 5px; text-align: center; padding: 0 10px;}
         
-        button { font-family: inherit; outline: none; flex-shrink: 0; }
+        button { font-family: inherit; outline: none; flex-shrink: 0; letter-spacing: 1px; }
+        
+        /* 装備ボタン（黒地に金枠） */
         .equip-btn { 
-            background: linear-gradient(145deg, #2c3e50, #1a252f); color: white; 
-            border: 1px solid rgba(255,255,255,0.1); width: 85%; padding: 12px; margin: 5px 0; 
-            font-size: 14px; border-radius: 12px; cursor: pointer; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s; 
+            background: linear-gradient(145deg, #111111, #080808); color: #d4af37; 
+            border: 1px solid rgba(212, 175, 55, 0.5); width: 85%; padding: 14px; margin: 6px 0; 
+            font-size: 13px; border-radius: 4px; cursor: pointer; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.8); transition: all 0.1s; 
         }
-        .equip-btn:active { transform: scale(0.96); background: #1a252f; }
+        .equip-btn:active { transform: scale(0.98); background: #080808; border-color: #f1c40f; }
         
-        .gacha-box { display: flex; gap: 4%; width: 85%; margin-top: 10px; flex-shrink: 0; }
-        .btn-gacha { flex: 1; background: linear-gradient(145deg, #e67e22, #d35400); color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .btn-gacha:active { transform: scale(0.96); }
-        .btn-synth { flex: 1; background: linear-gradient(145deg, #9b59b6, #8e44ad); color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .btn-synth:active { transform: scale(0.96); }
+        /* ガチャ・合成ボタン（ゴールドグラデーション） */
+        .gacha-box { display: flex; gap: 4%; width: 85%; margin-top: 15px; flex-shrink: 0; }
+        .btn-gacha, .btn-synth { 
+            flex: 1; background: linear-gradient(145deg, #d4af37, #aa801e); color: #111; 
+            border: 1px solid #ffe699; padding: 10px; font-size: 12px; font-weight: bold; 
+            border-radius: 4px; cursor: pointer; box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2); 
+        }
+        .btn-gacha:active, .btn-synth:active { transform: scale(0.96); }
         
-        .btn-start { background: linear-gradient(145deg, #2ecc71, #27ae60); color: white; margin-top: 20px; font-size: 16px; cursor: pointer; padding: 12px; font-weight: bold; border: none; border-radius: 12px; width: 85%; text-align: center; box-shadow: 0 4px 10px rgba(46,204,113,0.4); display: block; }
-        .btn-auto-start { background: rgba(0,0,0,0.3); color: #f39c12; margin-top: 12px; margin-bottom: 20px; font-size: 14px; cursor: pointer; padding: 10px; font-weight: bold; border: 1px solid #f39c12; border-radius: 12px; width: 85%; text-align: center; display: block; }
+        .btn-start { background: linear-gradient(145deg, #d4af37, #aa801e); color: #111; margin-top: 25px; font-size: 15px; cursor: pointer; padding: 14px; font-weight: bold; border: 1px solid #ffe699; border-radius: 4px; width: 85%; text-align: center; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); display: block; }
+        .btn-auto-start { background: rgba(0,0,0,0.8); color: #d4af37; margin-top: 12px; margin-bottom: 20px; font-size: 13px; cursor: pointer; padding: 12px; border: 1px solid #d4af37; border-radius: 4px; width: 85%; text-align: center; display: block; }
         
         #btn-auto-stop { 
-            position: absolute; top: 95px; left: 50%; transform: translateX(-50%); 
-            background: linear-gradient(135deg, #ff4757, #e74c3c); color: white; 
-            border: 1px solid rgba(255,255,255,0.5); padding: 8px 20px; font-size: 13px; 
-            border-radius: 20px; font-weight: bold; cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(231,76,60,0.5); z-index: 20; 
+            position: absolute; top: 85px; left: 50%; transform: translateX(-50%); 
+            background: linear-gradient(135deg, #8e0000, #590000); color: #fdfbf7; 
+            border: 1px solid #ff4d4d; padding: 8px 25px; font-size: 12px; letter-spacing: 2px;
+            border-radius: 4px; cursor: pointer; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8); z-index: 20; 
         }
         #btn-auto-stop:active { transform: translateX(-50%) scale(0.95); }
         
-        .modal { z-index: 30; background: #0a0f1e; }
-        .list-box { width: 90%; max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; margin-top: 10px; border-radius: 8px; flex-shrink: 0; }
-        .inv-item { background: #1a2535; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 10px; cursor: pointer; color: white; text-align: left; font-size: 14px; line-height: 1.4; position: relative; flex-shrink: 0; }
-        .inv-item:active { transform: scale(0.98); background: #2c3e50; }
-        .inv-item.selected { border: 2px solid #f1c40f; background: rgba(241,196,15,0.1); }
-        .inv-name { font-weight: bold; color: #ecf0f1; margin-bottom: 6px; display: inline-block; width: 70%; }
-        .inv-eff { font-size: 12px; color: #bdc3c7; }
-        .inv-eff.disabled { color: #7f8c8d; text-decoration: line-through; }
-        .inv-eff.demerit { color: #ff6b81; }
-        .btn-sell { position: absolute; right: 10px; top: 10px; background: #e74c3c; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 11px; cursor: pointer; font-weight: bold; z-index: 5; }
+        .modal { z-index: 30; background: #050505; }
+        .list-box { width: 90%; max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; margin-top: 10px; flex-shrink: 0; }
+        .inv-item { background: linear-gradient(145deg, #111111, #080808); border: 1px solid #333; padding: 14px; border-radius: 4px; cursor: pointer; color: #fdfbf7; text-align: left; font-size: 13px; line-height: 1.5; position: relative; flex-shrink: 0; }
+        .inv-item:active { transform: scale(0.98); background: #1a1a1a; }
+        .inv-item.selected { border: 1px solid #d4af37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
+        .inv-name { color: #d4af37; margin-bottom: 6px; display: inline-block; width: 70%; }
+        .inv-eff { font-size: 11px; color: #95a5a6; }
+        .inv-eff.disabled { color: #555; text-decoration: line-through; }
+        .inv-eff.demerit { color: #c0392b; }
+        .btn-sell { position: absolute; right: 10px; top: 12px; background: #8e0000; color: #fdfbf7; border: 1px solid #ff4d4d; border-radius: 2px; padding: 6px 12px; font-size: 10px; cursor: pointer; z-index: 5; }
     </style>
 </head>
 <body>
 <div id="game-wrapper">
     <canvas id="gameCanvas"></canvas>
-    <button id="btn-auto-stop" class="hidden">■ 自動操作を終了</button>
+    <button id="btn-auto-stop" class="hidden">AUTO STOP</button>
     
     <div id="title-layer" class="ui-layer">
         <div class="menu-content">
-            <h1>MEGA BREAKOUT<br><span style="font-size:20px; color:#f1c40f;">V14</span></h1>
-            <div class="blink">画面をタップしてスタート</div>
+            <h1 style="margin-bottom: 5px;">MEGA BREAKOUT</h1>
+            <div style="font-size:14px; color:#d4af37; letter-spacing: 6px; margin-bottom: 30px;">- LUXURY EDITION -</div>
+            <div class="blink">TAP TO START</div>
         </div>
     </div>
     
     <div id="equip-layer" class="ui-layer hidden">
         <div class="menu-content">
-            <h2 id="equip-title">【 装備変更 & 再挑戦 】</h2>
-            <div id="pt-label">所持ポイント: 0 pt</div>
-            <div id="auto-max-label" style="font-size:12px; color:#bdc3c7; margin-bottom:10px;">手動最高到達: 0層</div>
+            <h2 id="equip-title">EQUIPMENT</h2>
+            <div id="pt-label">0 pt</div>
+            <div id="auto-max-label" style="font-size:11px; color:#95a5a6; margin-bottom:15px; letter-spacing: 1px;">MANUAL MAX: 0</div>
             <div id="gacha-msg"></div>
             <button id="btn-main" class="equip-btn"></button>
             <button id="btn-sub" class="equip-btn"></button>
@@ -101,31 +113,31 @@
             <button id="btn-acc2" class="equip-btn"></button>
             
             <div class="gacha-box">
-                <button id="btn-gacha-1" class="btn-gacha">🎁 ガチャ</button>
-                <button id="btn-gacha-all" class="btn-gacha">🎁 一括</button>
-                <button id="btn-synth-menu" class="btn-synth">⚒️ 合成</button>
+                <button id="btn-gacha-1" class="btn-gacha">DRAW (300pt)</button>
+                <button id="btn-gacha-all" class="btn-gacha">DRAW ALL</button>
+                <button id="btn-synth-menu" class="btn-synth">SYNTHESIS</button>
             </div>
             
-            <button id="btn-start" class="btn-start">▶︎ 通常スタート</button>
-            <button id="btn-auto-start" class="btn-auto-start">🤖 自動モード (上限階層でループ)</button>
+            <button id="btn-start" class="btn-start">START MISSION</button>
+            <button id="btn-auto-start" class="btn-auto-start">AUTO MODE</button>
         </div>
     </div>
 
     <div id="inventory-modal" class="ui-layer modal hidden">
         <div class="menu-content">
-            <h2 id="inv-title">装備を選択</h2>
+            <h2 id="inv-title">INVENTORY</h2>
             <div id="inv-list" class="list-box"></div>
-            <button id="btn-inv-close" class="equip-btn" style="margin-top: 15px; background: linear-gradient(145deg, #e74c3c, #c0392b);">戻る</button>
+            <button id="btn-inv-close" class="equip-btn" style="margin-top: 15px; background: #8e0000; color: #fff; border-color: #ff4d4d;">CLOSE</button>
         </div>
     </div>
 
     <div id="synth-modal" class="ui-layer modal hidden">
         <div class="menu-content">
-            <h2>装備合成 (Lv.20同士)</h2>
-            <p style="font-size:12px; color:#bdc3c7; margin: 5px 0;">LvMAXのガチャ装備を2つ選択してください</p>
+            <h2>SYNTHESIS</h2>
+            <p style="font-size:11px; color:#95a5a6; margin: 5px 0;">Select two MAX Level items.</p>
             <div id="synth-list" class="list-box"></div>
-            <button id="btn-synth-exec" class="equip-btn" style="background: linear-gradient(145deg, #9b59b6, #8e44ad); margin-top: 15px;">合成実行 (2つ選択)</button>
-            <button id="btn-synth-close" class="equip-btn" style="margin-top: 5px; background: linear-gradient(145deg, #e74c3c, #c0392b);">戻る</button>
+            <button id="btn-synth-exec" class="equip-btn" style="background: linear-gradient(145deg, #d4af37, #aa801e); color: #111; margin-top: 15px; border-color: #ffe699;">EXECUTE</button>
+            <button id="btn-synth-close" class="equip-btn" style="margin-top: 5px; background: #8e0000; color: #fff; border-color: #ff4d4d;">CLOSE</button>
         </div>
     </div>
 </div>
@@ -225,7 +237,7 @@ const APPLY_EFFECTS = {
 class SaveData {
     constructor() { this.load(); }
     load() {
-        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v12')) || {}; } catch(e) {}
+        let data = {}; try { data = JSON.parse(localStorage.getItem('megabreakout_save_v14')) || {}; } catch(e) {}
         this.loadout = data.loadout || {main: 'main_normal', sub: 'none', option: 'none', acc1: 'none', acc2: 'none'};
         this.total_points = data.total_points || 0;
         this.item_counts = data.item_counts || {'main_normal': 1};
@@ -233,7 +245,7 @@ class SaveData {
         this.synth_items = data.synth_items || {};
         this.max_manual_layer = data.max_manual_layer || 0;
     }
-    save() { try { localStorage.setItem('megabreakout_save_v12', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
+    save() { try { localStorage.setItem('megabreakout_save_v14', JSON.stringify({loadout: this.loadout, total_points: this.total_points, item_counts: this.item_counts, custom_items: this.custom_items, synth_items: this.synth_items, max_manual_layer: this.max_manual_layer})); } catch(e) {} }
     getLevel(itemId) {
         if (itemId === 'none') return 0;
         const c = this.item_counts[itemId] || 0; if (c <= 0) return 0;
@@ -359,7 +371,6 @@ class Game {
         this.lives = this.s.maxLife;
 
         this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
-        
         for (let i = 0; i < 5; i++) this.spawnRow(this.topMargin + (i * this.ROW_H));
         
         const initialBalls = 1 + this.s.accBalls;
@@ -369,31 +380,23 @@ class Game {
         this.state = 'PLAYING';
     }
 
-    // ★上限階層の判定バグを修正した進行ロジック
     advanceLayer() {
-        if (this.autoMode) {
-            // オートモード時は設定された上限に達したらループ（再起動）する
-            if (this.totalLayers >= save.max_manual_layer) {
-                this.pendingRestart = true; 
-                return;
+        if (!this.autoMode) {
+            if (this.totalLayers > save.max_manual_layer) {
+                save.max_manual_layer = this.totalLayers;
+                save.save();
+                document.getElementById('auto-max-label').innerText = `MANUAL MAX: ${save.max_manual_layer}`;
+            }
+        } else {
+            if (this.totalLayers >= save.max_manual_layer && save.max_manual_layer > 0) {
+                this.pendingRestart = true; return;
             }
         }
         
         this.advanceTimer = 0; 
         this.totalLayers++;
-        
-        if (!this.autoMode) {
-            // 手動プレイ時は最高到達層を更新
-            if (this.totalLayers > save.max_manual_layer) {
-                save.max_manual_layer = this.totalLayers;
-                save.save();
-                document.getElementById('auto-max-label').innerText = `手動最高到達: ${save.max_manual_layer}層`;
-            }
-        }
-        
         this.blocks.forEach(b => { b.y += this.ROW_H; });
         this.spawnRow(this.topMargin); 
-        
         if (this.totalLayers > 0 && this.totalLayers % 10 === 0) this.spawnBoss();
     }
 
@@ -407,14 +410,14 @@ class Game {
     }
 
     createBlock(x, y, w) {
-        const r = Math.random(); let bType = 'normal', color = '#2ecc71'; 
+        const r = Math.random(); let bType = 'normal', color = '#95a5a6'; // 高級感のあるシルバーグレー
         
-        if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#7f8c8d'; }
-        else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = '#e74c3c'; } 
-        else if (r < 0.22) { bType = 'blue'; color = '#00ffff'; } 
-        else if (r < 0.28) { bType = 'laser_item'; color = '#f1c40f'; } 
-        else if (r < 0.30) { bType = 'giant_item'; color = '#9b59b6'; } 
-        else if (r < 0.35 && this.totalLayers >= 5) { bType = 'bomb'; color = '#34495e'; } 
+        if (r < 0.05 && this.totalLayers >= 10) { bType = 'hard'; color = '#111111'; } // 漆黒
+        else if (r < 0.15 && this.totalLayers >= 30) { bType = 'red'; color = '#c0392b'; } // ルビー
+        else if (r < 0.22) { bType = 'blue'; color = '#2980b9'; } // サファイア
+        else if (r < 0.28) { bType = 'laser_item'; color = '#d4af37'; } // ゴールド
+        else if (r < 0.30) { bType = 'giant_item'; color = '#8e44ad'; } // アメジスト
+        else if (r < 0.35 && this.totalLayers >= 5) { bType = 'bomb'; color = '#2c3e50'; } // ダークグレー
         
         let hp = 1;
         if (bType === 'normal' && this.totalLayers >= 4) {
@@ -422,7 +425,7 @@ class Game {
             if (Math.random() < hpRate) {
                 const maxHp = 1 + Math.floor(this.totalLayers / 5);
                 hp = Math.floor(Math.random() * maxHp) + 1;
-                if (hp > 1) color = '#bdc3c7'; 
+                if (hp > 1) color = '#7f8c8d'; 
             }
         }
         
@@ -434,7 +437,7 @@ class Game {
     spawnBall(x, y) {
         let vx = (Math.random() > 0.5 ? this.s.mainSpeed : -this.s.mainSpeed);
         this.balls.push({ 
-            x, y, w: 14, h: 14, color: '#ecf0f1', vx: vx, vy: -this.s.mainSpeed, 
+            x, y, w: 14, h: 14, color: '#fdfbf7', vx: vx, vy: -this.s.mainSpeed, 
             damage: this.s.mainDmg, activePierce: 0, activeExpRad: 0, activeExpDmg: 0, isLarge: false 
         });
     }
@@ -455,16 +458,16 @@ class Game {
 
     spawnItem(x, y, bType) {
         let c = 'white', w = 20;
-        if (bType === 'blue') c = '#00ffff'; 
-        else if (bType === 'laser_item') c = '#f1c40f';
-        else if (bType === 'giant_item') { c = '#9b59b6'; bType = 'large_ball'; }
-        else if (bType === 'boss_drop') { c = '#f39c12'; w = 25; } 
-        else if (bType === 'bomb_item') { c = '#ff00ff'; w = 22; }
+        if (bType === 'blue') c = '#2980b9'; 
+        else if (bType === 'laser_item') c = '#d4af37';
+        else if (bType === 'giant_item') { c = '#8e44ad'; bType = 'large_ball'; }
+        else if (bType === 'boss_drop') { c = '#d4af37'; w = 25; } 
+        else if (bType === 'bomb_item') { c = '#2c3e50'; w = 22; }
         this.items.push({ x, y, w, h: w, color: c, bType });
     }
 
     spawnBoss() {
-        this.state = 'BOSS'; this.boss = { x: canvas.width / 2, y: -60, w: 150, h: 60, color: '#e056fd', hp: 30 + (this.stage * 20), targetY: this.topMargin + 20 }; Sound.play('laser');
+        this.state = 'BOSS'; this.boss = { x: canvas.width / 2, y: -60, w: 150, h: 60, color: '#d4af37', hp: 30 + (this.stage * 20), targetY: this.topMargin + 20 }; Sound.play('laser');
     }
 
     update() {
@@ -514,17 +517,13 @@ class Game {
             if (b.y <= hw) { b.vy *= -1; wallHit = true; }
             if (b.y > this.ctrlY) { this.balls.splice(i, 1); continue; }
 
-            if (wallHit) {
-                b.activePierce = 0;
-                b.activeExpDmg = 0;
-                b.activeExpRad = 0;
-            }
+            if (wallHit) { b.activePierce = 0; b.activeExpDmg = 0; b.activeExpRad = 0; }
         }
 
         if (this.laserActiveTime > 0) {
             this.laserActiveTime--;
             if (this.subTimer % this.s.lsrInterval === 0) {
-                this.lasers.push({ x: this.paddle.x, y: this.paddle.y - 20, w: this.s.lsrWidth, h: 30, color: 'yellow', vy: -12, damage: this.s.lsrDmg, pierce: this.s.lsrPierce });
+                this.lasers.push({ x: this.paddle.x, y: this.paddle.y - 20, w: this.s.lsrWidth, h: 30, color: '#f39c12', vy: -12, damage: this.s.lsrDmg, pierce: this.s.lsrPierce });
                 Sound.play('laser');
             }
         }
@@ -532,7 +531,7 @@ class Game {
         if (this.s.hasMsl && this.subTimer % 120 === 0) {
             for(let i=0; i<this.s.mslCnt; i++) {
                 let dx = (i - (this.s.mslCnt-1)/2) * 30;
-                this.missiles.push({ x: this.paddle.x + dx, y: this.paddle.y - 20, w: 12, h: 20, vy: -this.s.mslSpd, damage: this.s.mslDmg, radius: this.s.mslRad, color: '#e67e22' });
+                this.missiles.push({ x: this.paddle.x + dx, y: this.paddle.y - 20, w: 12, h: 20, vy: -this.s.mslSpd, damage: this.s.mslDmg, radius: this.s.mslRad, color: '#f39c12' });
             }
         }
 
@@ -621,9 +620,9 @@ class Game {
                 const dx = this.paddle.x - x, dy = this.paddle.y - y, dist = Math.max(Math.hypot(dx, dy), 1);
                 vx = (dx / dist) * speed; vy = (dy / dist) * speed;
             }
-            this.enemyBullets.push({ x, y, w: 12, h: 12, color: '#ff4757', vx, vy });
-        } else if (type === 'laser') { this.enemyBullets.push({ x, y, w: 6, h: 80, color: '#ff6b81', vx: 0, vy: 12 }); } 
-        else if (type === 'falling_block') { this.fallingBlocks.push({ x, y, w: 30, h: 30, color: '#7f8c8d', vx: 0, vy: 2.5, hp: 3 + this.stage }); }
+            this.enemyBullets.push({ x, y, w: 12, h: 12, color: '#c0392b', vx, vy });
+        } else if (type === 'laser') { this.enemyBullets.push({ x, y, w: 6, h: 80, color: '#c0392b', vx: 0, vy: 12 }); } 
+        else if (type === 'falling_block') { this.fallingBlocks.push({ x, y, w: 30, h: 30, color: '#111111', vx: 0, vy: 2.5, hp: 3 + this.stage }); }
     }
 
     handleCollisions() {
@@ -675,7 +674,7 @@ class Game {
                 Sound.play('hit'); sat.hp--; 
                 if(sat.hp<=0) {
                     this.satellites.splice(idx,1);
-                    this.effects.push({ x: sat.x, y: sat.y, r: 20, life: 1.0, color: '#9b59b6' }); 
+                    this.effects.push({ x: sat.x, y: sat.y, r: 20, life: 1.0, color: '#d4af37' }); 
                     Sound.play('explosion');
                 }
             });
@@ -718,8 +717,8 @@ class Game {
                 this.bombCount = 0; Sound.play('explosion');
                 this.blocks.forEach(b => { save.total_points += Math.floor(10 * this.s.scoreMult); this.blocksDestroyed++; });
                 this.blocks = []; 
-                this.effects.push({ x: canvas.width/2, y: this.ctrlY, r: canvas.width*1.5, life: 0.5, color: 'rgba(255, 0, 255, 0.3)' });
-                this.addFloatingText(`BOMB EXECUTED!`, canvas.width/2, this.ctrlY - 50, '#ff00ff');
+                this.effects.push({ x: canvas.width/2, y: this.ctrlY, r: canvas.width*1.5, life: 0.5, color: 'rgba(212, 175, 55, 0.3)' });
+                this.addFloatingText(`BOMB EXECUTED!`, canvas.width/2, this.ctrlY - 50, '#d4af37');
             } else { Sound.play('coin'); }
         }
         else if (item.bType === 'boss_drop') {
@@ -727,7 +726,7 @@ class Game {
             const targetCat = cats[Math.floor(Math.random() * cats.length)];
             const dropItem = generateCustomDrop(this.totalLayers, targetCat);
             save.custom_items[dropItem.id] = dropItem;
-            save.save(); Sound.play('powerup'); this.addFloatingText(`★ ${dropItem.name} Get! ★`, this.paddle.x, this.paddle.y, '#f1c40f'); 
+            save.save(); Sound.play('powerup'); this.addFloatingText(`★ ITEM Get! ★`, this.paddle.x, this.paddle.y, '#d4af37'); 
         }
         if (item.bType !== 'boss_drop' && item.bType !== 'bomb_item') Sound.play('powerup');
     }
@@ -759,13 +758,7 @@ class Game {
             if (p.pierce > 0) p.pierce--; else this.lasers = this.lasers.filter(l => l !== p); 
         } else { 
             if (p.activeExpDmg > 0) this.triggerAOE(block.x, block.y, p.activeExpDmg, p.activeExpRad); 
-            
-            if (p.activePierce > 0) {
-                p.activePierce--; 
-            } else {
-                p.vy *= -1; 
-                p.activePierce = 0; p.activeExpDmg = 0; p.activeExpRad = 0; 
-            }
+            if (p.activePierce > 0) { p.activePierce--; } else { p.vy *= -1; p.activePierce = 0; p.activeExpDmg = 0; p.activeExpRad = 0; }
         }
     }
 
@@ -795,7 +788,7 @@ class Game {
             if (block.bType === 'red') this.fireEnemyAttack(block.x, block.y, 'bullet', true);
             else if (block.bType === 'bomb') {
                 Sound.play('explosion');
-                for (let a = 0; a < 360; a += 45) { const rad = a * Math.PI / 180; this.enemyBullets.push({ x: block.x, y: block.y, w: 10, h: 10, color: 'red', vx: Math.cos(rad)*4, vy: Math.sin(rad)*4 }); }
+                for (let a = 0; a < 360; a += 45) { const rad = a * Math.PI / 180; this.enemyBullets.push({ x: block.x, y: block.y, w: 10, h: 10, color: '#c0392b', vx: Math.cos(rad)*4, vy: Math.sin(rad)*4 }); }
             } else if (block.bType !== 'normal' && block.bType !== 'hard') this.spawnItem(block.x, block.y, block.bType);
             
             if (Math.random() < 0.05) this.spawnItem(block.x, block.y, 'bomb_item');
@@ -806,7 +799,7 @@ class Game {
     }
 
     triggerAOE(x, y, damage, radius) {
-        this.effects.push({ x, y, r: radius, life: 1.0, color: 'rgba(255, 165, 0, 0.6)' }); Sound.play('explosion'); 
+        this.effects.push({ x, y, r: radius, life: 1.0, color: 'rgba(212, 175, 55, 0.6)' }); Sound.play('explosion'); 
         for (let i = this.blocks.length - 1; i >= 0; i--) {
             if (this.blocks[i].bType === 'hard') continue; 
             if (Math.hypot(this.blocks[i].x - x, this.blocks[i].y - y) <= radius) { 
@@ -848,7 +841,7 @@ class Game {
         if (reachedLimit) {
             Sound.play('explosion');
             if (this.autoMode) { this.pendingRestart = true; return; }
-            this.gameOver = true; save.save(); document.getElementById('btn-auto-stop').classList.add('hidden'); showEquipMenu("【 防衛失敗...ブロックが限界を突破しました 】"); return;
+            this.gameOver = true; save.save(); document.getElementById('btn-auto-stop').classList.add('hidden'); showEquipMenu("【 MISSION FAILED 】"); return;
         }
 
         if (this.blocksDestroyed >= 6 && this.state !== 'BOSS') {
@@ -861,7 +854,7 @@ class Game {
         this.lives--; Sound.play('explosion');
         if (this.lives <= 0) {
             if (this.autoMode) { this.pendingRestart = true; return; }
-            this.gameOver = true; save.save(); document.getElementById('btn-auto-stop').classList.add('hidden'); showEquipMenu("【 ゲームオーバー 】");
+            this.gameOver = true; save.save(); document.getElementById('btn-auto-stop').classList.add('hidden'); showEquipMenu("【 GAME OVER 】");
         } else {
             this.spawnBarriers(); this.spawnStaticBarriers(); this.spawnSatellites();
         }
@@ -870,36 +863,48 @@ class Game {
     addFloatingText(text, x, y, color) { this.floatingTexts.push({ text, x, y, color, life: 1.0 }); }
 
     draw() {
-        ctx.fillStyle = this.state === 'TITLE' ? '#111' : '#0b0f19'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = this.state === 'TITLE' ? '#050505' : '#08080a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (this.state === 'TITLE' || this.state === 'EQUIP') return;
 
         // Danger Line
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'; ctx.beginPath(); ctx.moveTo(0, this.topMargin + 19 * this.ROW_H); ctx.lineTo(canvas.width, this.topMargin + 19 * this.ROW_H); ctx.stroke();
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.2)'; ctx.beginPath(); ctx.moveTo(0, this.topMargin + 19 * this.ROW_H); ctx.lineTo(canvas.width, this.topMargin + 19 * this.ROW_H); ctx.stroke();
         
-        ctx.fillStyle = '#12182b'; ctx.fillRect(0, this.ctrlY, canvas.width, canvas.height - this.ctrlY);
-        ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; ctx.fillRect(0, this.ctrlY, canvas.width, 2);
+        ctx.fillStyle = '#0a0a0c'; ctx.fillRect(0, this.ctrlY, canvas.width, canvas.height - this.ctrlY);
+        ctx.fillStyle = 'rgba(212, 175, 55, 0.4)'; ctx.fillRect(0, this.ctrlY, canvas.width, 1);
         
         // HUD
         let safeTop = 35; 
-        ctx.fillStyle = 'rgba(15, 20, 35, 0.8)'; ctx.fillRect(0, 0, canvas.width, 50 + safeTop);
-        ctx.fillStyle = '#00ffff'; ctx.font = '14px Helvetica-Bold'; ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(5, 5, 8, 0.9)'; ctx.fillRect(0, 0, canvas.width, 50 + safeTop);
+        ctx.fillStyle = '#d4af37'; ctx.font = '13px Palatino Linotype, serif'; ctx.textAlign = 'center';
         
-        const modeText = this.autoMode ? "[AUTO]" : `LIFE:${this.lives}`;
-        ctx.fillText(`Lv.${this.totalLayers} | ${modeText} | PTS:${save.total_points}`, canvas.width/2, 20 + safeTop);
-        ctx.fillStyle = '#bdc3c7'; ctx.font = '12px Helvetica-Bold';
+        const modeText = this.autoMode ? "[AUTO]" : `LIFE: ${this.lives}`;
+        ctx.fillText(`Lv.${this.totalLayers} | ${modeText} | PTS: ${save.total_points}`, canvas.width/2, 20 + safeTop);
+        ctx.fillStyle = '#95a5a6'; ctx.font = '11px Palatino Linotype, serif';
         ctx.fillText(`MAX: Lv.${save.max_manual_layer} | BOMB: ${this.bombCount}/${this.s.bombReq}`, canvas.width/2, 40 + safeTop);
 
+        // ★ 高級感のあるブロック描画（グラデーションと縁取り）
         const drawRect = (obj, isBlock=false) => {
-            ctx.fillStyle = obj.color || 'white'; ctx.fillRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
-            if (isBlock && obj.hp > 1 && obj.bType !== 'bomb') { ctx.fillStyle = (obj.bType==='hard')?'white':'black'; ctx.font = '12px Helvetica-Bold'; ctx.fillText(obj.hp, obj.x, obj.y + 4); }
-            else if (isBlock && obj.bType === 'bomb') { ctx.fillStyle = 'white'; ctx.font = '12px Helvetica-Bold'; ctx.fillText('✖', obj.x, obj.y + 4); }
+            if (isBlock) {
+                let grad = ctx.createLinearGradient(obj.x - obj.w/2, obj.y - obj.h/2, obj.x + obj.w/2, obj.y + obj.h/2);
+                grad.addColorStop(0, obj.color);
+                grad.addColorStop(1, '#050505');
+                ctx.fillStyle = grad;
+                ctx.fillRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.strokeRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
+
+                if (obj.hp > 1 && obj.bType !== 'bomb') { ctx.fillStyle = (obj.bType==='hard')?'white':'#111'; ctx.font = '10px Helvetica-Bold'; ctx.fillText(obj.hp, obj.x, obj.y + 4); }
+                else if (obj.bType === 'bomb') { ctx.fillStyle = 'white'; ctx.font = '10px Helvetica-Bold'; ctx.fillText('✖', obj.x, obj.y + 4); }
+            } else {
+                ctx.fillStyle = obj.color || 'white'; ctx.fillRect(obj.x - obj.w/2, obj.y - obj.h/2, obj.w, obj.h);
+            }
         };
 
         this.blocks.forEach(b => drawRect(b, true)); this.fallingBlocks.forEach(fb => drawRect(fb, true));
         this.items.forEach(i => { 
             drawRect(i); 
-            if(i.bType==='bomb_item') { ctx.fillStyle='white'; ctx.font='14px Helvetica-Bold'; ctx.fillText('B', i.x, i.y+5); }
-            if(i.bType==='laser_item') { ctx.fillStyle='black'; ctx.font='14px Helvetica-Bold'; ctx.fillText('L', i.x, i.y+5); }
+            if(i.bType==='bomb_item') { ctx.fillStyle='white'; ctx.font='12px Palatino Linotype'; ctx.fillText('B', i.x, i.y+4); }
+            if(i.bType==='laser_item') { ctx.fillStyle='#111'; ctx.font='12px Palatino Linotype'; ctx.fillText('L', i.x, i.y+4); }
         });
         
         this.enemyBullets.forEach(b => drawRect(b)); 
@@ -908,29 +913,35 @@ class Game {
         
         this.balls.forEach(b => { 
             if (b.activePierce > 0 || b.activeExpDmg > 0) {
-                ctx.shadowBlur = 10; ctx.shadowColor = b.activePierce > 0 ? 'cyan' : 'orange';
+                ctx.shadowBlur = 10; ctx.shadowColor = b.activePierce > 0 ? '#d4af37' : '#e67e22';
             }
             ctx.fillStyle = b.color; ctx.beginPath(); 
             ctx.arc(b.x, b.y, b.w/2, 0, Math.PI*2); ctx.fill(); 
             ctx.shadowBlur = 0; 
         });
         
+        // パドル（純金グラデーション）
+        let pGrad = ctx.createLinearGradient(this.paddle.x - this.paddle.w/2, this.paddle.y, this.paddle.x + this.paddle.w/2, this.paddle.y);
+        pGrad.addColorStop(0, '#aa801e'); pGrad.addColorStop(0.5, '#fdfbf7'); pGrad.addColorStop(1, '#aa801e');
+        this.paddle.color = pGrad;
         drawRect(this.paddle); 
-        this.barrierNodes.forEach(b => { b.color = '#00ffcc'; drawRect(b); });
-        this.staticBarriers.forEach(st => { st.color = '#3498db'; drawRect(st); });
+        
+        this.barrierNodes.forEach(b => { b.color = 'rgba(212, 175, 55, 0.8)'; drawRect(b); });
+        this.staticBarriers.forEach(st => { st.color = '#34495e'; drawRect(st); });
         this.satellites.forEach(sat => {
-            ctx.fillStyle = '#9b59b6'; ctx.fillRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w, sat.h);
-            ctx.fillStyle = 'white'; ctx.fillRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w * (sat.hp/sat.maxHp), 2);
+            ctx.fillStyle = '#2c3e50'; ctx.fillRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w, sat.h);
+            ctx.strokeStyle = '#d4af37'; ctx.strokeRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w, sat.h);
+            ctx.fillStyle = '#d4af37'; ctx.fillRect(sat.x - sat.w/2, sat.y - sat.h/2, sat.w * (sat.hp/sat.maxHp), 2);
         });
 
-        if (this.boss) { drawRect(this.boss); ctx.fillStyle = 'white'; ctx.font = '20px Helvetica-Bold'; ctx.fillText(`HP: ${Math.max(0, this.boss.hp)}`, this.boss.x, this.boss.y + 10); }
+        if (this.boss) { drawRect(this.boss, true); ctx.fillStyle = '#111'; ctx.font = '16px Palatino Linotype'; ctx.fillText(`HP: ${Math.max(0, this.boss.hp)}`, this.boss.x, this.boss.y + 6); }
 
         for (let i = this.effects.length - 1; i >= 0; i--) {
             let e = this.effects[i]; ctx.globalAlpha = e.life; ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
             ctx.globalAlpha = 1.0; e.life -= 0.05; if (e.life <= 0) this.effects.splice(i, 1);
         }
         for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
-            let ft = this.floatingTexts[i]; ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = '16px Helvetica-Bold'; ctx.fillText(ft.text, ft.x, ft.y);
+            let ft = this.floatingTexts[i]; ctx.globalAlpha = ft.life; ctx.fillStyle = ft.color; ctx.font = '14px Palatino Linotype'; ctx.fillText(ft.text, ft.x, ft.y);
             ctx.globalAlpha = 1.0; ft.y -= 1; ft.life -= 0.015; if (ft.life <= 0) this.floatingTexts.splice(i, 1);
         }
     }
@@ -971,7 +982,7 @@ titleLayer.addEventListener('mousedown', startTitle);
 function updateAllEquipBtns() {
     ['main', 'sub', 'option', 'acc1', 'acc2'].forEach((slotKey) => {
         const itemId = save.loadout[slotKey];
-        let name = ITEM_DEFS[itemId] ? ITEM_DEFS[itemId].name : "不明な装備";
+        let name = ITEM_DEFS[itemId] ? ITEM_DEFS[itemId].name : "NO ITEM";
         
         if (itemId !== 'none') {
             if (save.custom_items[itemId] || save.synth_items[itemId]) {
@@ -983,16 +994,16 @@ function updateAllEquipBtns() {
                 name = `${name} [Lv.${lvl}]${lvl >= 20 ? ' MAX' : ''}`;
             }
         }
-        const label = {'main':'メイン', 'sub':'サブ', 'option':'ｵﾌﾟｼｮﾝ', 'acc1':'ｱｸｾ(1)', 'acc2':'ｱｸｾ(2)'}[slotKey];
-        document.getElementById(`btn-${slotKey}`).innerText = `${label}: ${name}`;
+        const label = {'main':'MAIN', 'sub':'SUB', 'option':'OPT', 'acc1':'ACC(1)', 'acc2':'ACC(2)'}[slotKey];
+        document.getElementById(`btn-${slotKey}`).innerText = `${label} | ${name}`;
     });
 }
 
 function showEquipMenu(msg) {
     game.state = 'EQUIP'; titleLayer.classList.add('hidden'); equipLayer.classList.remove('hidden'); invModal.classList.add('hidden'); synthModal.classList.add('hidden');
-    document.getElementById('equip-title').innerText = msg ? msg : '【 装備変更 & 再挑戦 】';
-    document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
-    document.getElementById('auto-max-label').innerText = `手動最高到達: ${save.max_manual_layer}層`;
+    document.getElementById('equip-title').innerText = msg ? msg : 'ARMORY';
+    document.getElementById('pt-label').innerText = `${save.total_points} Pt`;
+    document.getElementById('auto-max-label').innerText = `MANUAL MAX: Lv.${save.max_manual_layer}`;
     document.getElementById('gacha-msg').innerText = '';
     updateAllEquipBtns();
 }
@@ -1010,7 +1021,7 @@ function showEquipMenu(msg) {
             btn.className = 'inv-item';
             
             if (itemData) {
-                btn.style.borderLeft = itemData.cat === 'mix' ? '4px solid #9b59b6' : '4px solid #f1c40f';
+                btn.style.borderLeft = itemData.cat === 'mix' ? '4px solid #9b59b6' : '4px solid #d4af37';
                 const itemLvl = itemData.level || 1;
                 
                 let effectStr = itemData.effects.map(ef => {
@@ -1032,14 +1043,14 @@ function showEquipMenu(msg) {
                 if (!itemData.id.startsWith('synth_')) {
                     const sellBtn = document.createElement('div');
                     sellBtn.className = 'btn-sell';
-                    sellBtn.innerText = '売却';
+                    sellBtn.innerText = 'SELL';
                     sellBtn.onclick = (e) => {
                         e.stopPropagation();
                         delete save.custom_items[itemId];
                         if(save.loadout[slotKey] === itemId) save.loadout[slotKey] = 'none';
                         save.total_points += 500;
                         save.save(); Sound.play('coin'); btn.remove();
-                        document.getElementById('pt-label').innerText = `所持ポイント: ${save.total_points} pt`;
+                        document.getElementById('pt-label').innerText = `${save.total_points} Pt`;
                     };
                     btn.innerHTML = nameHtml + `<div class="inv-eff">${effectStr}</div>`;
                     btn.appendChild(sellBtn);
@@ -1078,7 +1089,7 @@ function showEquipMenu(msg) {
         
         equipLayer.classList.add('hidden');
         invModal.classList.remove('hidden');
-        document.getElementById('inv-title').innerText = `装備を選択 (${slotKey.toUpperCase()})`;
+        document.getElementById('inv-title').innerText = `${slotKey.toUpperCase()}`;
     });
 });
 
@@ -1089,9 +1100,9 @@ btnAutoStop.addEventListener('click', () => { game.autoMode = false; btnAutoStop
 
 function pullGacha(isBulk) {
     const cost = 300;
-    if (save.total_points < cost) return document.getElementById('gacha-msg').innerText = "ポイントが足りません！";
+    if (save.total_points < cost) return document.getElementById('gacha-msg').innerText = "Not enough points.";
     let pool = GACHA_POOL.filter(item => save.getLevel(item) < 20);
-    if (pool.length === 0) return document.getElementById('gacha-msg').innerText = "通常ガチャの装備はすべて最大(Lv.20)です！";
+    if (pool.length === 0) return document.getElementById('gacha-msg').innerText = "All items MAX level.";
 
     let pulls = isBulk ? Math.floor(save.total_points / cost) : 1;
     save.total_points -= pulls * cost;
@@ -1106,7 +1117,7 @@ function pullGacha(isBulk) {
     }
     
     Sound.play('powerup'); save.save(); 
-    showEquipMenu(isBulk ? `一括ガチャ完了: ${pulls}回引きました` : `★ ${lastItem} をゲット！ ★`);
+    showEquipMenu(isBulk ? `Drew ${pulls} times.` : `★ ${lastItem} Get! ★`);
 }
 
 document.getElementById('btn-gacha-1').addEventListener('click', () => pullGacha(false));
@@ -1129,8 +1140,8 @@ function refreshSynthList() {
     let lv20Items = GACHA_POOL.filter(k => save.getLevel(k) === 20);
     
     if (lv20Items.length < 2) {
-        listEl.innerHTML = '<p style="color:white; text-align:center;">Lv.20のガチャ装備が2つ以上必要です</p>';
-        execBtn.innerText = "合成実行 (2つ選択してください)";
+        listEl.innerHTML = '<p style="color:#d4af37; text-align:center;">Need 2 or more MAX Lv items.</p>';
+        execBtn.innerText = "SELECT 2 ITEMS";
         return;
     }
 
@@ -1151,9 +1162,9 @@ function refreshSynthList() {
     });
 
     if (synthSelected.length === 2) {
-        execBtn.innerText = "★ 合成実行 ★";
+        execBtn.innerText = "★ EXECUTE SYNTHESIS ★";
     } else {
-        execBtn.innerText = "合成実行 (2つ選択)";
+        execBtn.innerText = "SELECT 2 ITEMS";
     }
 }
 
@@ -1165,16 +1176,16 @@ document.getElementById('btn-synth-exec').addEventListener('click', () => {
     
     if (save.synth_items[synthId]) {
         save.synth_items[synthId].level++;
-        alert(`合成成功！\n既存の合成装備が Lv.${save.synth_items[synthId].level} に強化されました！`);
+        alert(`SUCCESS!\nUpgraded to Lv.${save.synth_items[synthId].level}!`);
     } else {
         save.synth_items[synthId] = {
             id: synthId,
             cat: 'mix',
-            name: `【合】${ITEM_DEFS[keys[0]].short} & ${ITEM_DEFS[keys[1]].short}`,
+            name: `【MIX】${ITEM_DEFS[keys[0]].short} & ${ITEM_DEFS[keys[1]].short}`,
             effects: [{ type: keys[0], level: 1 }, { type: keys[1], level: 1 }],
             level: 1
         };
-        alert(`合成成功！\n新しい合成装備【Lv.1】を作成しました！`);
+        alert(`SUCCESS!\nCreated new item [Lv.1]!`);
     }
     
     Sound.play('powerup'); synthSelected = []; save.save(); refreshSynthList();
